@@ -74,16 +74,16 @@ def web_search(query: str):
 # =========================
 # STEP 4 — SYSTEM PROMPT
 # =========================
-SYSTEM_PROMPT = """You are a highly strict, user-focused laptop advisor for India.
+SYSTEM_PROMPT = """You are a highly strict smartphone advisor for India.
 
-Your goal is to give accurate, helpful, and well-structured laptop recommendations.
+Your goal is to give accurate, helpful, and well-structured smartphone recommendations.
 
 =====================
 CORE RULES (MANDATORY)
 =====================
 
-- ONLY use laptops from PRODUCT_DATA
-- DO NOT invent laptop names
+- ONLY use smartphones from PRODUCT_DATA
+- DO NOT invent smartphone names
 - DO NOT modify product names
 - DO NOT hallucinate specs, price, or battery
 - DO NOT use your own knowledge if PRODUCT_DATA is present
@@ -97,9 +97,9 @@ USER UNDERSTANDING
 
 Before answering:
 - Understand user needs:
-  - Use case (e.g., data science, gaming, coding)
+  - Use case (e.g., photography, gaming, long battery life)
   - Budget (INR)
-  - Priority (battery, performance, portability)
+  - Priority (camera, battery, performance, display, 5G)
 
 - Tailor recommendations accordingly
 
@@ -107,15 +107,22 @@ Before answering:
 RECOMMENDATION RULES
 =====================
 
-- Provide minimum 2 and maximum 4 laptops
-- Choose only relevant laptops from PRODUCT_DATA
+- Recommend 3–5 smartphones
+- Choose only relevant smartphones from PRODUCT_DATA
+- Focus on:
+  - Camera
+  - Battery
+  - Performance
+  - Display
+  - 5G
 - Prefer:
-  - Latest generation CPUs (12th gen+, Ryzen 5000+)
-  - Minimum 16GB RAM (for data science)
-  - SSD storage only
+  - Minimum 6GB RAM (prefer 8GB+)
+  - Minimum 128GB Storage
+  - Good processor (Snapdragon 7/8 series, Dimensity 800+)
+  - 5G support
 
 - Skip:
-  - Outdated laptops
+  - Outdated phones
   - Incomplete or unclear products
 
 =====================
@@ -132,18 +139,19 @@ RECOMMENDATIONS:
 NAME: <exact product name>
 
 SPECS:
-- CPU:
+- Processor:
 - RAM:
-- SSD:
-- GPU:
+- Storage:
+- Camera:
 - Battery:
+- Display:
 
 WHY GOOD:
 - 1 line benefit based on user use case
 
 ---------------------
 
-(Repeat for 2–4 laptops)
+(Repeat for 3–5 smartphones)
 
 =====================
 LINKS (SEPARATE SECTION — VERY IMPORTANT)
@@ -218,7 +226,7 @@ Focus on helping the user make a confident buying decision.
 def ask_rag(question):
 
     # 🔍 Search query (better)
-    search_query = f"{question} latest laptop India 2024 2025 buy site:amazon.in OR site:flipkart.com"
+    search_query = f"{question} best smartphone mobile phone India 2025 buy site:amazon.in OR site:flipkart.com"
 
     results = web_search(search_query)
 
@@ -233,8 +241,8 @@ def ask_rag(question):
     for r in results:
         title = r["title"].lower()
 
-        # ❌ remove old gen / bad GPUs
-        if any(x in title for x in ["10th", "11th", "mx250", "mx350"]):
+        # ❌ remove accessories / irrelevant items
+        if any(x in title for x in ["case", "cover", "protector", "charger", "cable"]):
             continue
 
         products.append({
@@ -248,18 +256,18 @@ def ask_rag(question):
     valid_products = []
 
     for p in products:
-        if len(p["name"]) < 15:
+        if len(p["name"]) < 10:
             continue
         if "review" in p["link"]:
             continue
 
         valid_products.append(p)
 
-    # keep 2–4 products
-    valid_products = valid_products[:4]
+    # keep 3–5 products
+    valid_products = valid_products[:5]
 
     if len(valid_products) < 2:
-        return "Not enough reliable latest laptops found."
+        return "Not enough reliable latest smartphones found."
 
     # =========================
     # LLM (Formatter only)

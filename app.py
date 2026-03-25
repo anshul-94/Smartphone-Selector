@@ -37,9 +37,9 @@ async def search_tavily(query: str) -> str:
     
     queries = [
         f"{query} buy now site:amazon.in OR site:flipkart.com",
-        f"{query} buy laptop amazon",
-        f"{query} flipkart laptop buy",
-        f"{query} i5 16GB laptop amazon india"
+        f"{query} buy smartphone amazon",
+        f"{query} flipkart smartphone buy",
+        f"{query} 5G 128GB smartphone amazon india"
     ]
     
     async def fetch_results(client: httpx.AsyncClient, q: str) -> list[dict]:
@@ -77,7 +77,7 @@ async def search_tavily(query: str) -> str:
     strict_valid_items: list[dict] = []
     for link, item in unique_items.items():
         url_lower = link.lower()
-        if any(x in url_lower for x in ["search", "category", "collections", "laptops"]):
+        if any(x in url_lower for x in ["search", "category", "collections", "cases", "covers"]):
             continue
         if "amazon.in" in url_lower and "/dp/" in url_lower:
             strict_valid_items.append(item)
@@ -89,7 +89,7 @@ async def search_tavily(query: str) -> str:
             if item in strict_valid_items: 
                 continue
             url_lower = link.lower()
-            if any(x in url_lower for x in ["search", "category", "collections", "laptops"]):
+            if any(x in url_lower for x in ["search", "category", "collections", "cases", "covers"]):
                 continue
             if "amazon.in" in url_lower and ("/dp/" in url_lower or "/gp/product/" in url_lower):
                 strict_valid_items.append(item)
@@ -121,13 +121,13 @@ async def call_openrouter(query: str, context: str) -> str:
     }
     
     system_prompt = """You are a senior production-level AI engineer.
-Build a HIGH-QUALITY AI laptop recommendation system.
+Build a HIGH-QUALITY AI smartphone recommendation system.
 
 CRITICAL REQUIREMENTS:
-1. Recommend EXACTLY 4 to 5 laptops based on Performance, Latest generation CPU, Reliability, Value for money.
+1. Recommend EXACTLY 3 to 5 smartphones based on Camera, Battery, Performance, Display, and 5G support.
 2. Select ONLY the BEST options.
-3. Highlight ONE laptop as BEST PICK. The others go under OTHER RECOMMENDATIONS.
-4. Every laptop MUST have a DIRECT PRODUCT BUY LINK from the context.
+3. Highlight ONE smartphone as BEST PICK. The others go under OTHER RECOMMENDATIONS.
+4. Every smartphone MUST have a DIRECT PRODUCT BUY LINK from the context.
 5. NEVER generate your own links. ONLY use the verified URLs from the context.
 6. Do NOT hallucinate. Drop ANY product without a valid direct link in the context.
 
@@ -140,14 +140,15 @@ REASONING:
 
 BEST PICK:
 
-NAME: [Laptop Name]
+NAME: [Smartphone Name]
 
 SPECS:
-* CPU: ...
+* Processor: ...
 * RAM: ...
-* SSD: ...
-* GPU: ...
+* Storage: ...
+* Camera: ...
 * Battery: ...
+* Display: ...
 
 WHY BEST:
 [1 strong reason]
@@ -156,31 +157,32 @@ WHY BEST:
 
 OTHER RECOMMENDATIONS:
 
-NAME: [Laptop Name]
+NAME: [Smartphone Name]
 
 SPECS:
-* CPU: ...
+* Processor: ...
 * RAM: ...
-* SSD: ...
-* GPU: ...
+* Storage: ...
+* Camera: ...
 * Battery: ...
+* Display: ...
 
 WHY GOOD:
 [1 line]
 
 ---
-(repeat OTHER RECOMMENDATIONS sections separated by --- until 4-5 laptops total)
+(repeat OTHER RECOMMENDATIONS sections separated by --- until 3-5 smartphones total)
 ---
 
 LINKS:
-[Laptop Name 1]:
+[Smartphone Name 1]:
 [Valid URL from context]
 
-[Laptop Name 2]:
+[Smartphone Name 2]:
 [Valid URL from context]
 """
     
-    user_prompt = f"Query: {query}\n\nContext:\n{context}\n\nRecommend exactly 4 to 5 laptops following the strict output format."
+    user_prompt = f"Query: {query}\n\nContext:\n{context}\n\nRecommend exactly 3 to 5 smartphones following the strict output format."
     
     model_name = os.getenv("OPENROUTER_MODEL", "meta-llama/llama-3.3-70b-instruct")
     

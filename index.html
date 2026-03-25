@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Laptop Recommender</title>
+    <title>AI Mobile Finder</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -30,8 +30,8 @@
             flex-direction: column;
             overflow: hidden;
             background-image: 
-                radial-gradient(circle at 10% 20%, rgba(88, 166, 255, 0.05) 0%, transparent 40%),
-                radial-gradient(circle at 90% 80%, rgba(88, 166, 255, 0.05) 0%, transparent 40%);
+                radial-gradient(circle at 10% 20%, rgba(88, 166, 255, 0.09) 0%, transparent 45%),
+                radial-gradient(circle at 90% 80%, rgba(188, 140, 255, 0.09) 0%, transparent 45%);
         }
 
         .header {
@@ -119,18 +119,18 @@
 
         .cards-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-            gap: 20px;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 24px;
             margin-bottom: 24px;
             width: 100%;
         }
 
-        .laptop-card {
+        .phone-card {
             background: var(--card-bg);
             border: 1px solid var(--border-color);
-            border-radius: 16px;
+            border-radius: 20px;
             padding: 24px;
-            transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
+            transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.4s ease, border-color 0.4s ease;
             display: flex;
             flex-direction: column;
             height: 100%;
@@ -160,7 +160,7 @@
             z-index: 2;
         }
 
-        .laptop-card::before {
+        .phone-card::before {
             content: '';
             position: absolute;
             top: 0; left: 0; right: 0;
@@ -170,10 +170,10 @@
             transition: opacity 0.3s ease;
         }
 
-        .laptop-card:hover {
-            transform: translateY(-4px);
-            box-shadow: 0 12px 30px rgba(0, 0, 0, 0.4);
-            border-color: rgba(88, 166, 255, 0.3);
+        .phone-card:hover {
+            transform: translateY(-8px) scale(1.02);
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.5);
+            border-color: rgba(88, 166, 255, 0.4);
         }
 
         .best-pick-card:hover {
@@ -181,11 +181,11 @@
             box-shadow: 0 12px 30px rgba(88, 166, 255, 0.15);
         }
 
-        .laptop-card:hover::before {
+        .phone-card:hover::before {
             opacity: 1;
         }
 
-        .laptop-name {
+        .phone-name {
             font-size: 1.25rem;
             font-weight: 600;
             color: #fff;
@@ -385,16 +385,16 @@
 <body>
 
     <header class="header">
-        <h1>AI Laptop Finder</h1>
+        <h1>📱 AI Mobile Finder</h1>
     </header>
 
     <main class="chat-container" id="chatContainer">
         <div class="message-list" id="messageList">
             <div class="message bot">
                 <div class="bubble" style="background: var(--bot-bubble); border: 1px solid var(--border-color); border-bottom-left-radius: 4px; padding: 16px 20px;">
-                    Hello! I'm your AI laptop assistant. Tell me what you need, and I'll find the perfect laptops for you.
+                    Hello! I'm your AI smartphone assistant. Tell me what you need, and I'll find the perfect smartphones for you.
                     <br><br>
-                    <span style="color: var(--text-muted); font-size: 0.9em;">Example: "I want the best gaming laptop under 1 lakh with strong reliability and an RTX GPU."</span>
+                    <span style="color: var(--text-muted); font-size: 0.9em;">Example: "I want the best 5G smartphone under 30000 with a great camera and battery."</span>
                 </div>
             </div>
         </div>
@@ -402,7 +402,7 @@
 
     <div class="input-container">
         <form class="input-box" id="queryForm">
-            <input type="text" id="queryInput" placeholder="Describe your ideal laptop..." autocomplete="off" required>
+            <input type="text" id="queryInput" placeholder="Describe your ideal smartphone..." autocomplete="off" required>
             <button type="submit" id="submitBtn">Ask AI</button>
         </form>
     </div>
@@ -563,9 +563,9 @@
                 }
 
                 return `
-                    <div class="laptop-card ${isBest ? 'best-pick-card' : ''}">
-                        ${isBest ? '<div class="best-badge">⭐ BEST</div>' : ''}
-                        <div class="laptop-name">${escapeHTML(rec.name)}</div>
+                    <div class="phone-card ${isBest ? 'best-pick-card' : ''}">
+                        ${isBest ? '<div class="best-badge">⭐ TOP PICK</div>' : ''}
+                        <div class="phone-name">${escapeHTML(rec.name)}</div>
                         <ul class="specs-list">
                             ${rec.specs.map(s => `<li>${escapeHTML(s)}</li>`).join('')}
                         </ul>
