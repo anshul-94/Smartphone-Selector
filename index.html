@@ -1,0 +1,656 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Laptop Recommender</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #0d1117;
+            --container-bg: rgba(22, 27, 34, 0.6);
+            --border-color: rgba(255, 255, 255, 0.1);
+            --accent-color: #58a6ff;
+            --accent-hover: #1f6feb;
+            --text-main: #e6edf3;
+            --text-muted: #8b949e;
+            --card-bg: rgba(255, 255, 255, 0.03);
+            --bot-bubble: rgba(255, 255, 255, 0.05);
+            --user-bubble: #1f6feb;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            background-image: 
+                radial-gradient(circle at 10% 20%, rgba(88, 166, 255, 0.05) 0%, transparent 40%),
+                radial-gradient(circle at 90% 80%, rgba(88, 166, 255, 0.05) 0%, transparent 40%);
+        }
+
+        .header {
+            padding: 20px 40px;
+            border-bottom: 1px solid var(--border-color);
+            background: rgba(13, 17, 23, 0.8);
+            backdrop-filter: blur(12px);
+            z-index: 10;
+        }
+
+        .header h1 {
+            font-size: 1.5rem;
+            font-weight: 600;
+            background: linear-gradient(90deg, #58a6ff, #bc8cff);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .chat-container {
+            flex: 1;
+            overflow-y: auto;
+            padding: 40px;
+            scroll-behavior: smooth;
+        }
+
+        .message-list {
+            max-width: 900px;
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+            padding-bottom: 40px;
+        }
+
+        .message {
+            display: flex;
+            flex-direction: column;
+            max-width: 85%;
+            animation: fadeIn 0.4s ease-out forwards;
+        }
+
+        .message.user {
+            align-self: flex-end;
+            align-items: flex-end;
+            max-width: 70%;
+        }
+
+        .message.bot {
+            align-self: flex-start;
+            align-items: flex-start;
+        }
+
+        .bubble {
+            padding: 16px 20px;
+            border-radius: 16px;
+            font-size: 1rem;
+            line-height: 1.5;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        .user .bubble {
+            background-color: var(--user-bubble);
+            color: #fff;
+            border-bottom-right-radius: 4px;
+        }
+
+        .bot .bubble {
+            background-color: transparent;
+            width: 100%;
+            padding: 0;
+            box-shadow: none;
+        }
+
+        .reasoning {
+            font-size: 0.95rem;
+            color: var(--text-muted);
+            margin-bottom: 24px;
+            padding-left: 16px;
+            border-left: 3px solid var(--border-color);
+            background: rgba(255, 255, 255, 0.02);
+            padding: 16px;
+            border-radius: 0 12px 12px 0;
+        }
+
+        .cards-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 20px;
+            margin-bottom: 24px;
+            width: 100%;
+        }
+
+        .laptop-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 24px;
+            transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            position: relative;
+            overflow: hidden;
+            backdrop-filter: blur(10px);
+        }
+
+        .best-pick-card {
+            border: 1px solid var(--accent-color);
+            background: rgba(88, 166, 255, 0.08);
+            margin-bottom: 24px;
+            grid-column: 1 / -1; 
+        }
+
+        .best-badge {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: linear-gradient(90deg, #ffd700, #ff8c00);
+            color: #000;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 700;
+            box-shadow: 0 4px 10px rgba(255, 215, 0, 0.3);
+            z-index: 2;
+        }
+
+        .laptop-card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, #58a6ff, #bc8cff);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .laptop-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 30px rgba(0, 0, 0, 0.4);
+            border-color: rgba(88, 166, 255, 0.3);
+        }
+
+        .best-pick-card:hover {
+            border-color: #bc8cff;
+            box-shadow: 0 12px 30px rgba(88, 166, 255, 0.15);
+        }
+
+        .laptop-card:hover::before {
+            opacity: 1;
+        }
+
+        .laptop-name {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: #fff;
+            margin-bottom: 16px;
+            padding-right: 80px; /* Space for the badge */
+        }
+
+        .specs-list {
+            list-style: none;
+            margin-bottom: 20px;
+            flex: 1;
+        }
+
+        .specs-list li {
+            font-size: 0.9rem;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: flex-start;
+            color: var(--text-main);
+        }
+
+        .specs-list li::before {
+            content: '•';
+            color: var(--accent-color);
+            font-weight: bold;
+            display: inline-block;
+            width: 1em;
+            margin-right: 4px;
+        }
+
+        .why-good {
+            background: rgba(88, 166, 255, 0.1);
+            border: 1px solid rgba(88, 166, 255, 0.2);
+            padding: 12px;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            color: #79c0ff;
+            margin-bottom: 20px;
+            line-height: 1.4;
+        }
+
+        .best-pick-card .why-good {
+            background: rgba(255, 215, 0, 0.1);
+            border-color: rgba(255, 215, 0, 0.2);
+            color: #ffd700;
+        }
+
+        .why-good-title {
+            font-weight: 600;
+            margin-bottom: 4px;
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            opacity: 0.8;
+        }
+
+        .buy-link {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            padding: 12px 20px;
+            background: var(--bot-bubble);
+            color: #fff;
+            text-decoration: none;
+            border-radius: 8px;
+            font-size: 0.95rem;
+            font-weight: 600;
+            border: 1px solid var(--border-color);
+            transition: all 0.2s ease;
+            margin-top: auto;
+        }
+
+        .buy-link:hover {
+            background: var(--accent-hover);
+            border-color: var(--accent-hover);
+            box-shadow: 0 4px 15px rgba(31, 111, 235, 0.4);
+        }
+
+        .section-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #fff;
+            margin: 16px 0;
+            padding-bottom: 8px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .input-container {
+            padding: 24px 40px;
+            background: rgba(13, 17, 23, 0.8);
+            backdrop-filter: blur(12px);
+            border-top: 1px solid var(--border-color);
+        }
+
+        .input-box {
+            max-width: 900px;
+            margin: 0 auto;
+            display: flex;
+            gap: 16px;
+            position: relative;
+        }
+
+        input {
+            flex: 1;
+            padding: 16px 24px;
+            border-radius: 24px;
+            border: 1px solid var(--border-color);
+            background: var(--container-bg);
+            color: #fff;
+            font-size: 1rem;
+            font-family: inherit;
+            transition: border-color 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: var(--accent-color);
+            box-shadow: 0 0 0 4px rgba(88, 166, 255, 0.1);
+        }
+
+        input::placeholder {
+            color: var(--text-muted);
+        }
+
+        button {
+            padding: 0 24px;
+            border-radius: 24px;
+            border: none;
+            background: var(--accent-color);
+            color: #0d1117;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-family: inherit;
+        }
+
+        button:hover {
+            background: #79c0ff;
+            transform: translateY(-1px);
+        }
+
+        button:active {
+            transform: translateY(1px);
+        }
+
+        button:disabled {
+            background: #30363d;
+            color: #8b949e;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .loading-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            height: 24px;
+            padding: 16px 20px;
+            background: var(--bot-bubble);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            border-bottom-left-radius: 4px;
+        }
+
+        .dot {
+            width: 6px;
+            height: 6px;
+            background-color: var(--text-muted);
+            border-radius: 50%;
+            animation: bounce 1.4s infinite ease-in-out both;
+        }
+
+        .dot:nth-child(1) { animation-delay: -0.32s; }
+        .dot:nth-child(2) { animation-delay: -0.16s; }
+
+        @keyframes bounce {
+            0%, 80%, 100% { transform: scale(0); opacity: 0.3; }
+            40% { transform: scale(1); opacity: 1; }
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @media (max-width: 768px) {
+            .input-box { flex-direction: column; }
+            button { padding: 16px; }
+            .header, .chat-container, .input-container { padding: 16px; }
+            .message.user { max-width: 90%; }
+            .best-pick-card { grid-column: auto; }
+        }
+    </style>
+</head>
+<body>
+
+    <header class="header">
+        <h1>AI Laptop Finder</h1>
+    </header>
+
+    <main class="chat-container" id="chatContainer">
+        <div class="message-list" id="messageList">
+            <div class="message bot">
+                <div class="bubble" style="background: var(--bot-bubble); border: 1px solid var(--border-color); border-bottom-left-radius: 4px; padding: 16px 20px;">
+                    Hello! I'm your AI laptop assistant. Tell me what you need, and I'll find the perfect laptops for you.
+                    <br><br>
+                    <span style="color: var(--text-muted); font-size: 0.9em;">Example: "I want the best gaming laptop under 1 lakh with strong reliability and an RTX GPU."</span>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <div class="input-container">
+        <form class="input-box" id="queryForm">
+            <input type="text" id="queryInput" placeholder="Describe your ideal laptop..." autocomplete="off" required>
+            <button type="submit" id="submitBtn">Ask AI</button>
+        </form>
+    </div>
+
+    <script>
+        const form = document.getElementById('queryForm');
+        const input = document.getElementById('queryInput');
+        const submitBtn = document.getElementById('submitBtn');
+        const messageList = document.getElementById('messageList');
+        const chatContainer = document.getElementById('chatContainer');
+
+        function scrollToBottom() {
+            chatContainer.scrollTo({
+                top: chatContainer.scrollHeight,
+                behavior: 'smooth'
+            });
+        }
+
+        function appendUserMessage(text) {
+            const msgObj = document.createElement('div');
+            msgObj.className = 'message user';
+            msgObj.innerHTML = `<div class="bubble">${escapeHTML(text)}</div>`;
+            messageList.appendChild(msgObj);
+            scrollToBottom();
+        }
+
+        function appendLoading() {
+            const msgObj = document.createElement('div');
+            msgObj.className = 'message bot loading';
+            msgObj.innerHTML = `
+                <div class="loading-indicator">
+                    <div class="dot"></div>
+                    <div class="dot"></div>
+                    <div class="dot"></div>
+                </div>
+            `;
+            messageList.appendChild(msgObj);
+            scrollToBottom();
+            return msgObj;
+        }
+
+        function escapeHTML(str) {
+            return str.replace(/[&<>'"]/g, 
+                tag => ({
+                    '&': '&amp;',
+                    '<': '&lt;',
+                    '>': '&gt;',
+                    "'": '&#39;',
+                    '"': '&quot;'
+                }[tag])
+            );
+        }
+
+        function parseResponse(text) {
+            let reasoning = '';
+            const reasonMatch = text.match(/REASONING:\s*([\s\S]+?)(?=\n*---|\n*BEST PICK:)/i);
+            if (reasonMatch) reasoning = reasonMatch[1].trim();
+
+            let bestPick = null;
+            const bestPickRegex = /BEST PICK:\s*NAME:\s*(.+?)\s*SPECS:\s*([\s\S]+?)\s*WHY BEST:\s*([\s\S]+?)(?=\n*---|OTHER RECOMMENDATIONS:|\n*NAME:|$)/gi;
+            const bestMatch = bestPickRegex.exec(text);
+            if (bestMatch) {
+                bestPick = {
+                    name: bestMatch[1].trim(),
+                    specs: bestMatch[2].trim().split('\n').map(s => s.replace(/^[*\-]\s*/, '').trim()).filter(Boolean),
+                    whyBest: bestMatch[3].trim()
+                };
+            }
+
+            let otherRecs = [];
+            // Parse OTHER RECOMMENDATIONS using NAME: as an anchor
+            const othersPattern = /NAME:\s*(.+?)\s*SPECS:\s*([\s\S]+?)\s*WHY GOOD:\s*([\s\S]+?)(?=\n*NAME:|\n*---|\n*LINKS:|$)/gi;
+            
+            // Search string for everything after BEST PICK, or entire text if none
+            let othersStart = text.indexOf('OTHER RECOMMENDATIONS:');
+            let searchSpace = text;
+            if (othersStart !== -1) {
+                searchSpace = text.slice(othersStart, text.indexOf('LINKS:'));
+            } else if (bestPick) {
+                searchSpace = text.slice(text.indexOf(bestPick.whyBest) + bestPick.whyBest.length, text.indexOf('LINKS:'));
+            }
+
+            let match;
+            while ((match = othersPattern.exec(searchSpace)) !== null) {
+                if (bestPick && bestPick.name === match[1].trim()) continue; // Prevent duplicates just in case
+                
+                otherRecs.push({
+                    name: match[1].trim(),
+                    specs: match[2].trim().split('\n').map(s => s.replace(/^[*\-]\s*/, '').trim()).filter(Boolean),
+                    whyGood: match[3].trim()
+                });
+            }
+
+            let links = {};
+            const linksSectionMatch = text.match(/LINKS:\s*([\s\S]+)$/i);
+            if (linksSectionMatch) {
+                const linkBlocks = linksSectionMatch[1].match(/([^\n:]+):\s*\n*(https?:\/\/[^\n]+)/gi);
+                if (linkBlocks) {
+                    linkBlocks.forEach(block => {
+                        const parts = block.split(/:\s*\n*/);
+                        if (parts.length >= 2) {
+                            links[parts[0].trim()] = parts.slice(1).join('').trim();
+                        }
+                    });
+                }
+            }
+            
+            return { reasoning, bestPick, otherRecs, links };
+        }
+
+
+
+        function sanitizeUrl(url) {
+            if (!url) return "#";
+            url = url.trim();
+
+            // Fix missing colon
+            url = url.replace("https//", "https://");
+            url = url.replace("http//", "http://");
+
+            // Remove leading slash
+            if (url.startsWith("/")) {
+                url = url.substring(1);
+            }
+
+            // Ensure absolute URL
+            if (!url.startsWith("http")) {
+                url = "https://" + url;
+            }
+
+            return url;
+        }
+
+        function createResultHTML(parsed, fullText) {
+            let html = '';
+
+            if (parsed.reasoning) {
+                html += `<div class="reasoning">${escapeHTML(parsed.reasoning)}</div>`;
+            }
+
+            function renderCard(rec, isBest) {
+                const matchedLinkKey = Object.keys(parsed.links).find(k => k.toLowerCase().includes(rec.name.toLowerCase()) || rec.name.toLowerCase().includes(k.toLowerCase()));
+                let link = matchedLinkKey ? parsed.links[matchedLinkKey] : null;
+
+                let linkHtml = '';
+                if (link) {
+                    const cleanUrl = sanitizeUrl(link);
+                    console.log("Rendered Link:", cleanUrl);
+                    
+                    const linkElement = document.createElement("a");
+                    linkElement.href = cleanUrl;
+                    linkElement.target = "_blank";
+                    linkElement.rel = "noopener noreferrer";
+                    linkElement.innerText = "Buy Now";
+                    linkElement.className = "buy-link";
+                    
+                    linkHtml = linkElement.outerHTML;
+                }
+
+                return `
+                    <div class="laptop-card ${isBest ? 'best-pick-card' : ''}">
+                        ${isBest ? '<div class="best-badge">⭐ BEST</div>' : ''}
+                        <div class="laptop-name">${escapeHTML(rec.name)}</div>
+                        <ul class="specs-list">
+                            ${rec.specs.map(s => `<li>${escapeHTML(s)}</li>`).join('')}
+                        </ul>
+                        <div class="why-good">
+                            <div class="why-good-title">${isBest ? "Why it's the Best" : "Why it's a fit"}</div>
+                            ${escapeHTML(isBest ? rec.whyBest : rec.whyGood)}
+                        </div>
+                        ${linkHtml}
+                    </div>
+                `;
+            }
+
+            if (parsed.bestPick) {
+                html += renderCard(parsed.bestPick, true);
+            }
+
+            if (parsed.otherRecs.length > 0) {
+                if (parsed.bestPick) {
+                    html += `<div class="section-title">Other Recommendations</div>`;
+                }
+                html += `<div class="cards-grid">`;
+                parsed.otherRecs.forEach(rec => {
+                    html += renderCard(rec, false);
+                });
+                html += `</div>`;
+            }
+
+            if (!parsed.bestPick && parsed.otherRecs.length === 0) {
+                html += `<div class="bubble" style="white-space: pre-wrap; background: var(--bot-bubble); border: 1px solid var(--border-color); padding: 16px 20px; border-bottom-left-radius: 4px;">${escapeHTML(fullText)}</div>`;
+            }
+
+            return html;
+        }
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const query = input.value.trim();
+            if (!query) return;
+
+            input.value = '';
+            submitBtn.disabled = true;
+            input.disabled = true;
+
+            appendUserMessage(query);
+            const loadingDOM = appendLoading();
+
+            try {
+                const response = await fetch('/ask', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ question: query })
+                });
+                
+                if (!response.ok) throw new Error('Network response was not ok');
+                
+                const data = await response.json();
+                
+                loadingDOM.remove();
+
+                const answerText = data.answer || '';
+                const parsed = parseResponse(answerText);
+                
+                const msgObj = document.createElement('div');
+                msgObj.className = 'message bot';
+                
+                const bubbleObj = document.createElement('div');
+                bubbleObj.className = 'bubble';
+                bubbleObj.innerHTML = createResultHTML(parsed, answerText);
+                
+                msgObj.appendChild(bubbleObj);
+                messageList.appendChild(msgObj);
+                
+            } catch (error) {
+                loadingDOM.remove();
+                const msgObj = document.createElement('div');
+                msgObj.className = 'message bot';
+                msgObj.innerHTML = `<div class="bubble" style="color: #ff7b72; background: rgba(255,123,114,0.1); border: 1px solid rgba(255,123,114,0.3); padding: 16px 20px; border-bottom-left-radius: 4px;">Error: Could not connect to the server. Please try again.</div>`;
+                messageList.appendChild(msgObj);
+            } finally {
+                submitBtn.disabled = false;
+                input.disabled = false;
+                input.focus();
+                scrollToBottom();
+            }
+        });
+    </script>
+</body>
+</html>
