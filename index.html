@@ -3,26 +3,29 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Mobile Finder</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <title>AI Mobile Finder </title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
     <style>
         :root {
-            --bg-color: #0d1117;
-            --container-bg: rgba(22, 27, 34, 0.6);
-            --border-color: rgba(255, 255, 255, 0.1);
-            --accent-color: #58a6ff;
-            --accent-hover: #1f6feb;
-            --text-main: #e6edf3;
-            --text-muted: #8b949e;
-            --card-bg: rgba(255, 255, 255, 0.03);
-            --bot-bubble: rgba(255, 255, 255, 0.05);
-            --user-bubble: #1f6feb;
+            --bg-color: #050505;
+            --container-bg: rgba(18, 18, 20, 0.6);
+            --border-color: rgba(255, 255, 255, 0.08);
+            --border-highlight: rgba(255, 255, 255, 0.15);
+            --accent-color: #0070f3;
+            --accent-glow: rgba(0, 112, 243, 0.4);
+            --accent-hover: #3291ff;
+            --text-main: #ededed;
+            --text-muted: #a1a1aa;
+            --card-bg: rgba(255, 255, 255, 0.02);
+            --bot-bubble: rgba(255, 255, 255, 0.03);
+            --user-bubble: linear-gradient(135deg, #0070f3, #bc8cff);
+            --trace-bg: rgba(10, 10, 12, 0.95);
         }
 
         * { margin: 0; padding: 0; box-sizing: border-box; }
         
         body {
-            font-family: 'Inter', sans-serif;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
             background-color: var(--bg-color);
             color: var(--text-main);
             height: 100vh;
@@ -30,395 +33,607 @@
             flex-direction: column;
             overflow: hidden;
             background-image: 
-                radial-gradient(circle at 10% 20%, rgba(88, 166, 255, 0.09) 0%, transparent 45%),
-                radial-gradient(circle at 90% 80%, rgba(188, 140, 255, 0.09) 0%, transparent 45%);
+                radial-gradient(ellipse at 15% 50%, rgba(0, 112, 243, 0.15), transparent 45%),
+                radial-gradient(ellipse at 85% 30%, rgba(188, 140, 255, 0.15), transparent 45%);
+            background-attachment: fixed;
         }
 
+        /* --- Header --- */
         .header {
-            padding: 20px 40px;
+            padding: 16px 32px;
             border-bottom: 1px solid var(--border-color);
             background: rgba(13, 17, 23, 0.8);
             backdrop-filter: blur(12px);
             z-index: 10;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            height: 73px;
         }
-
         .header h1 {
-            font-size: 1.5rem;
-            font-weight: 600;
-            background: linear-gradient(90deg, #58a6ff, #bc8cff);
+            font-size: 1.35rem;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+            background: linear-gradient(90deg, #fff, #a1a1aa);
             -webkit-background-clip: text;
             background-clip: text;
             -webkit-text-fill-color: transparent;
         }
+        .header-actions {
+            display: flex;
+            gap: 12px;
+        }
 
+        /* --- Buttons --- */
+        button {
+            padding: 12px 20px;
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            background: linear-gradient(180deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0) 100%), var(--accent-color);
+            box-shadow: 0 4px 14px 0 var(--accent-glow);
+            color: #fff;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+        }
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0, 112, 243, 0.6);
+            background: linear-gradient(180deg, rgba(255,255,255,0.12) 0%, rgba(255,255,255,0) 100%), var(--accent-hover);
+        }
+        button:active { transform: translateY(0); }
+        button:disabled { background: #1f1f1f; color: #555; cursor: not-allowed; box-shadow: none; transform: none; border-color: transparent; }
+        .secondary-btn { background: rgba(255,255,255,0.03); color: var(--text-main); border-color: var(--border-color); box-shadow: none; }
+        .secondary-btn:hover { background: rgba(255, 255, 255, 0.08); border-color: var(--border-highlight); box-shadow: 0 4px 14px rgba(0,0,0,0.4); }
+        .icon-btn { width: 36px; height: 36px; padding: 0; border-radius: 10px; background: rgba(255,255,255,0.03); color: var(--text-muted); border: 1px solid var(--border-color); box-shadow: none;}
+        .icon-btn:hover { background: rgba(255,255,255,0.1); color: #fff; box-shadow: 0 4px 12px rgba(0,0,0,0.3); }
+        .icon-btn.small { width: 28px; height: 28px; font-size: 0.9rem; border-radius: 8px;}
+
+        /* --- Layout --- */
+        .main-wrapper {
+            display: flex;
+            flex: 1;
+            height: calc(100vh - 73px);
+            overflow: hidden;
+            position: relative;
+        }
+        .left-pane {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            transition: width 0.3s;
+        }
+        .right-pane {
+            width: 420px;
+            min-width: 420px;
+            background: var(--trace-bg);
+            border-left: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            transition: transform 0.3s cubic-bezier(0.165, 0.84, 0.44, 1);
+            z-index: 100;
+        }
+        .right-pane.closed { transform: translateX(100%); position: absolute; right: 0; height: 100%; }
+
+        @media (max-width: 1024px) {
+            .right-pane { position: absolute; right: 0; height: 100%; transform: translateX(100%); }
+            .right-pane:not(.closed) { transform: translateX(0); box-shadow: -10px 0 30px rgba(0,0,0,0.5); }
+        }
+
+        /* --- Sidebar Filters --- */
+        .sidebar-filters {
+            width: 280px;
+            min-width: 280px;
+            background: rgba(10, 10, 12, 0.6);
+            border-right: 1px solid var(--border-color);
+            padding: 32px 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+            z-index: 50;
+            overflow-y: auto;
+            transition: transform 0.4s cubic-bezier(0.165, 0.84, 0.44, 1);
+        }
+        .filter-section-title {
+            font-size: 1.1rem; color: #fff; font-weight: 700; padding-bottom: 16px; letter-spacing: -0.3px;
+            border-bottom: 1px solid rgba(255,255,255,0.05); display: flex; align-items: center; gap: 8px;
+        }
+        .filter-group { display: flex; flex-direction: column; gap: 8px; }
+        .filter-group label { font-size: 0.75rem; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 2px;}
+        select {
+            appearance: none; width: 100%; padding: 14px 16px; border-radius: 12px; border: 1px solid var(--border-color);
+            background: rgba(255, 255, 255, 0.03); color: #fff; font-size: 0.95rem; cursor: pointer; outline: none; transition: all 0.2s;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.2);
+        }
+        select:focus { border-color: var(--accent-color); background: rgba(0, 112, 243, 0.05); box-shadow: 0 0 0 3px rgba(0, 112, 243, 0.2); }
+        
+        .sidebar-actions { margin-top: 10px; display: flex; flex-direction: column; gap: 12px; }
+        .sidebar-actions button { width: 100%; justify-content: center; }
+
+        .mobile-filter-btn { display: none; margin-right: 12px; }
+
+        @media (max-width: 900px) {
+            .mobile-filter-btn { display: inline-flex; }
+            .sidebar-filters { position: absolute; left: 0; top: 0; bottom: 0; transform: translateX(-100%); background: rgba(13, 17, 23, 0.95); box-shadow: 10px 0 30px rgba(0,0,0,0.5); }
+            .sidebar-filters.open { transform: translateX(0); }
+        }
+
+        /* --- Left Pane: Chat UI --- */
         .chat-container {
             flex: 1;
             overflow-y: auto;
-            padding: 40px;
+            padding: 24px 32px;
             scroll-behavior: smooth;
+            display: flex;
+            flex-direction: column;
         }
-
         .message-list {
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
             max-width: 900px;
+            width: 100%;
             margin: 0 auto;
-            display: flex;
-            flex-direction: column;
-            gap: 24px;
-            padding-bottom: 40px;
+            flex: 1;
         }
-
-        .message {
-            display: flex;
-            flex-direction: column;
-            max-width: 85%;
-            animation: fadeIn 0.4s ease-out forwards;
-        }
-
-        .message.user {
-            align-self: flex-end;
-            align-items: flex-end;
-            max-width: 70%;
-        }
-
-        .message.bot {
-            align-self: flex-start;
-            align-items: flex-start;
-        }
-
+        .message { display: flex; flex-direction: column; max-width: 85%; }
+        .message.bot { align-self: flex-start; width: 100%; }
+        .message.user { align-self: flex-end; max-width: 70%; align-items: flex-end; }
         .bubble {
-            padding: 16px 20px;
-            border-radius: 16px;
-            font-size: 1rem;
-            line-height: 1.5;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            padding: 16px 20px; border-radius: 16px; font-size: 0.95rem; line-height: 1.5;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
+            animation: slideUpFade 0.3s ease-out forwards;
         }
-
-        .user .bubble {
-            background-color: var(--user-bubble);
-            color: #fff;
-            border-bottom-right-radius: 4px;
-        }
-
-        .bot .bubble {
-            background-color: transparent;
-            width: 100%;
-            padding: 0;
-            box-shadow: none;
-        }
-
-        .reasoning {
-            font-size: 0.95rem;
-            color: var(--text-muted);
-            margin-bottom: 24px;
-            padding-left: 16px;
-            border-left: 3px solid var(--border-color);
-            background: rgba(255, 255, 255, 0.02);
-            padding: 16px;
-            border-radius: 0 12px 12px 0;
-        }
-
-        .cards-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-            gap: 24px;
-            margin-bottom: 24px;
-            width: 100%;
-        }
-
-        .phone-card {
-            background: var(--card-bg);
+        .bot .bubble { background: transparent; width: 100%; padding: 0; box-shadow: none; animation: none; }
+        .bot > .bubble-container { animation: slideUpFade 0.4s ease-out forwards; width: 100%; }
+        .user .bubble { background-color: var(--user-bubble); color: #fff; border-bottom-right-radius: 4px; }
+        
+        /* Reasoning UI */
+        .reasoning-block {
+            background: linear-gradient(145deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0.01) 100%);
             border: 1px solid var(--border-color);
-            border-radius: 20px;
+            border-left: 4px solid var(--accent-color);
             padding: 24px;
-            transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.4s ease, border-color 0.4s ease;
-            display: flex;
-            flex-direction: column;
-            height: 100%;
-            position: relative;
-            overflow: hidden;
+            border-radius: 16px;
+            margin-bottom: 32px;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.12);
             backdrop-filter: blur(10px);
         }
+        .reasoning-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+        .reasoning-title { color: var(--accent-color); font-weight: 700; font-size: 1rem; display: flex; align-items: center; gap: 8px;}
+        .reasoning-list { font-size: 0.95rem; color: var(--text-muted); padding-left: 20px; margin: 0; line-height: 1.6; }
+        .reasoning-list li { margin-bottom: 10px; }
 
+        /* Info Bubble */
+        .info-bubble {
+            background: var(--bot-bubble); border: 1px solid var(--border-color);
+            padding: 16px 20px; border-radius: 12px; border-bottom-left-radius: 4px;
+            color: var(--text-main); font-size: 0.95rem; line-height: 1.5;
+        }
+        .error-bubble {
+            background: rgba(255, 123, 114, 0.1); border: 1px solid rgba(255, 123, 114, 0.3);
+            color: #ff7b72; padding: 16px 20px; border-radius: 12px; border-bottom-left-radius: 4px;
+        }
+        .empty-bubble { border: 1px dashed var(--border-color); text-align: center; color: var(--text-muted); opacity: 0.8; }
+
+        /* Rendered Cards */
+        .cards-grid {
+            display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 24px;
+        }
+        .phone-card {
+            background: linear-gradient(180deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0.01) 100%);
+            border: 1px solid var(--border-color); 
+            border-radius: 20px; 
+            padding: 24px;
+            display: flex; flex-direction: column; position: relative; 
+            backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+            transition: all 0.4s cubic-bezier(0.165, 0.84, 0.44, 1);
+            box-shadow: 0 4px 24px rgba(0,0,0,0.2);
+        }
+        .phone-card:hover { 
+            border-color: rgba(255,255,255,0.25); 
+            transform: translateY(-6px) scale(1.005); 
+            box-shadow: 0 20px 50px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.12) inset, 0 0 20px rgba(0, 112, 243, 0.08); 
+        }
         .best-pick-card {
-            border: 1px solid var(--accent-color);
-            background: rgba(88, 166, 255, 0.08);
-            margin-bottom: 24px;
-            grid-column: 1 / -1; 
+            border-color: rgba(0, 112, 243, 0.5); 
+            background: linear-gradient(180deg, rgba(0,112,243,0.08) 0%, rgba(0,112,243,0.02) 100%);
+            box-shadow: 0 0 0 1px rgba(0, 112, 243, 0.25), 0 8px 32px rgba(0, 112, 243, 0.15);
+            grid-column: 1 / -1; display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 32px;
         }
-
-        .best-badge {
-            position: absolute;
-            top: 20px;
-            right: 20px;
-            background: linear-gradient(90deg, #ffd700, #ff8c00);
-            color: #000;
-            padding: 4px 12px;
-            border-radius: 20px;
-            font-size: 0.8rem;
-            font-weight: 700;
-            box-shadow: 0 4px 10px rgba(255, 215, 0, 0.3);
-            z-index: 2;
-        }
-
-        .phone-card::before {
-            content: '';
-            position: absolute;
-            top: 0; left: 0; right: 0;
-            height: 4px;
-            background: linear-gradient(90deg, #58a6ff, #bc8cff);
-            opacity: 0;
-            transition: opacity 0.3s ease;
-        }
-
-        .phone-card:hover {
-            transform: translateY(-8px) scale(1.02);
-            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.5);
-            border-color: rgba(88, 166, 255, 0.4);
-        }
-
+        @media (max-width: 800px) { .best-pick-card { grid-template-columns: 1fr; } }
         .best-pick-card:hover {
-            border-color: #bc8cff;
-            box-shadow: 0 12px 30px rgba(88, 166, 255, 0.15);
+            border-color: rgba(0, 112, 243, 0.9);
+            box-shadow: 0 24px 50px rgba(0, 112, 243, 0.3), 0 0 30px rgba(0,112,243,0.15) inset, 0 0 0 1px rgba(0,112,243,0.4);
+            transform: translateY(-6px) scale(1.005);
         }
-
-        .phone-card:hover::before {
-            opacity: 1;
+        .best-badge { 
+            position: absolute; top: -14px; right: 24px; 
+            background: linear-gradient(90deg, #0070f3, #bc8cff); 
+            color: #fff; padding: 6px 14px; border-radius: 20px; 
+            font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1px;
+            box-shadow: 0 8px 20px rgba(0, 112, 243, 0.4); 
+            border: 1px solid rgba(255,255,255,0.2);
         }
-
-        .phone-name {
-            font-size: 1.25rem;
-            font-weight: 600;
-            color: #fff;
-            margin-bottom: 16px;
-            padding-right: 80px; /* Space for the badge */
+        .phone-name { font-size: 1.3rem; font-weight: 700; margin-bottom: 20px; padding-right: 80px; color: #fff; letter-spacing: -0.3px; line-height: 1.3;}
+        .specs-list { list-style: none; margin-bottom: 24px; flex: 1; }
+        .specs-list li { font-size: 0.9rem; margin-bottom: 10px; color: var(--text-muted); display: flex; align-items: flex-start;}
+        .specs-list li::before { content: '✦'; color: var(--text-muted); margin-right: 8px; font-size: 0.75rem; margin-top: 3px; }
+        .why-good { 
+            background: rgba(255, 255, 255, 0.02); 
+            border: 1px solid rgba(255, 255, 255, 0.05); 
+            padding: 16px; border-radius: 12px; font-size: 0.9rem; margin-bottom: 20px; line-height: 1.6; color: var(--text-main);
         }
+        .best-pick-card .why-good { background: rgba(0, 112, 243, 0.05); border-color: rgba(0, 112, 243, 0.15); }
+        .why-good-title { font-weight: 700; font-size: 0.75rem; text-transform: uppercase; color: var(--text-muted); margin-bottom: 6px; letter-spacing: 0.5px; }
+        .best-pick-card .why-good-title { color: var(--accent-color); }
+        .buy-link { display: inline-flex; align-items: center; justify-content: center; padding: 12px; background: rgba(255,255,255,0.05); color: #fff; text-decoration: none; border-radius: 12px; font-size: 0.95rem; font-weight: 600; border: 1px solid var(--border-color); margin-top: auto; transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); word-break: break-all;}
+        .buy-link:hover { background: #fff; color: #050505; border-color: #fff; transform: translateY(-2px) scale(1.02); box-shadow: 0 6px 20px rgba(255,255,255,0.25); }
 
-        .specs-list {
-            list-style: none;
-            margin-bottom: 20px;
-            flex: 1;
-        }
+        /* --- Loading State (Shimmer) --- */
+        .shimmer-bubble { background: var(--bot-bubble); border: 1px solid var(--border-color); padding: 20px; border-radius: 16px; border-bottom-left-radius: 4px; width: 100%; max-width: 600px; }
+        .shimmer-header { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
+        .shimmer-icon { font-size: 1.1rem; animation: pulse 1.5s infinite; }
+        .shimmer-text { color: var(--accent-color); font-weight: 600; font-size: 0.95rem; }
+        .shimmer-line { height: 12px; border-radius: 6px; background: linear-gradient(90deg, rgba(255,255,255,0.05) 25%, rgba(255,255,255,0.1) 50%, rgba(255,255,255,0.05) 75%); background-size: 400% 100%; animation: shimmer 1.5s infinite linear; margin-bottom: 12px; }
+        .shimmer-line.w-75 { width: 75%; }
+        .shimmer-line.w-50 { width: 50%; }
 
-        .specs-list li {
-            font-size: 0.9rem;
-            margin-bottom: 8px;
-            display: flex;
-            align-items: flex-start;
-            color: var(--text-main);
-        }
+        /* --- Input Area --- */
+        .input-container { padding: 20px 32px; background: rgba(13, 17, 23, 0.9); border-top: 1px solid var(--border-color); backdrop-filter: blur(12px); }
+        .input-box { max-width: 900px; margin: 0 auto; display: flex; gap: 12px; }
+        input[type="text"] { flex: 1; padding: 14px 20px; border-radius: 20px; border: 1px solid var(--border-color); background: var(--container-bg); color: #fff; font-size: 0.95rem; font-family: inherit; transition: 0.2s; outline: none; }
+        input[type="text"]:focus { border-color: var(--accent-color); box-shadow: 0 0 0 3px rgba(88, 166, 255, 0.15); }
+        .input-box button { border-radius: 20px; padding: 0 24px; }
 
-        .specs-list li::before {
-            content: '•';
-            color: var(--accent-color);
-            font-weight: bold;
-            display: inline-block;
-            width: 1em;
-            margin-right: 4px;
-        }
+        /* --- Right Pane: Trace History --- */
+        .trace-header { padding: 16px 24px; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; background: rgba(13, 17, 23, 0.9); }
+        .trace-header h2 { font-size: 1.1rem; color: #fff; font-weight: 600; margin:0; }
+        .trace-actions { display: flex; gap: 8px; }
+        .trace-body { flex: 1; overflow-y: auto; padding: 20px 24px; display: flex; flex-direction: column; gap: 20px; scroll-behavior: smooth; }
 
-        .why-good {
-            background: rgba(88, 166, 255, 0.1);
-            border: 1px solid rgba(88, 166, 255, 0.2);
-            padding: 12px;
-            border-radius: 8px;
-            font-size: 0.9rem;
-            color: #79c0ff;
-            margin-bottom: 20px;
-            line-height: 1.4;
-        }
-
-        .best-pick-card .why-good {
-            background: rgba(255, 215, 0, 0.1);
-            border-color: rgba(255, 215, 0, 0.2);
-            color: #ffd700;
-        }
-
-        .why-good-title {
-            font-weight: 600;
-            margin-bottom: 4px;
-            font-size: 0.8rem;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            opacity: 0.8;
-        }
-
-        .buy-link {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            width: 100%;
-            padding: 12px 20px;
-            background: var(--bot-bubble);
-            color: #fff;
-            text-decoration: none;
-            border-radius: 8px;
-            font-size: 0.95rem;
-            font-weight: 600;
+        .trace-card { background: var(--container-bg); border: 1px solid var(--border-color); border-radius: 12px; overflow: hidden; animation: slideUpFade 0.3s ease-out; box-shadow: 0 8px 24px rgba(0,0,0,0.2); }
+        .trace-card-header { padding: 14px 16px; background: rgba(88, 166, 255, 0.1); border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; cursor: pointer; transition: background 0.2s; }
+        .trace-card-header:hover { background: rgba(88, 166, 255, 0.15); }
+        .trace-card-title { font-weight: 600; color: var(--accent-color); font-size: 0.9rem; }
+        .trace-card-time { font-size: 0.75rem; color: var(--text-muted); }
+        
+        .trace-card-body { display: none; flex-direction: column; gap: 1px; background: var(--border-color); }
+        .trace-card-body.open { display: flex; }
+        
+        .trace-step { 
+            background: rgba(255,255,255,0.04);
             border: 1px solid var(--border-color);
-            transition: all 0.2s ease;
-            margin-top: auto;
+            border-radius: 10px;
+            margin-bottom: 12px;
+            max-height: 250px;
+            overflow-y: auto;
+            overflow-x: hidden;
+            scroll-behavior: smooth;
+            display: flex;
+            flex-direction: column;
         }
-
-        .buy-link:hover {
-            background: var(--accent-hover);
-            border-color: var(--accent-hover);
-            box-shadow: 0 4px 15px rgba(31, 111, 235, 0.4);
-        }
-
-        .section-title {
-            font-size: 1.1rem;
-            font-weight: 600;
-            color: #fff;
-            margin: 16px 0;
-            padding-bottom: 8px;
+        .trace-step-header { 
+            padding: 12px 16px; 
+            font-size: 0.85rem; 
+            font-weight: 600; 
+            cursor: pointer; 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            background: rgba(255,255,255,0.03);
+            position: sticky;
+            top: 0;
+            z-index: 2;
             border-bottom: 1px solid var(--border-color);
+            transition: background 0.2s; 
         }
-
-        .input-container {
-            padding: 24px 40px;
-            background: rgba(13, 17, 23, 0.8);
-            backdrop-filter: blur(12px);
-            border-top: 1px solid var(--border-color);
+        .trace-step-header:hover { background: rgba(255,255,255,0.07); }
+        
+        .trace-step-content-wrapper { display: none; flex: 1; }
+        .trace-step-content-wrapper.open { display: block; }
+        
+        .trace-step-content {
+            overflow: visible;
+            padding: 12px;
+            border-radius: 0 0 10px 10px;
+            background: transparent;
+            font-family: monospace;
         }
+        
+        .trace-step-content pre { margin: 0; font-family: inherit; font-size: 0.8rem; color: #e6edf3; white-space: pre-wrap; word-break: break-all; line-height: 1.5; }
 
-        .input-box {
-            max-width: 900px;
-            margin: 0 auto;
-            display: flex;
-            gap: 16px;
-            position: relative;
-        }
+        /* Custom Scrollbars */
+        .trace-body::-webkit-scrollbar, .trace-step-content::-webkit-scrollbar, .chat-container::-webkit-scrollbar { width: 6px; background: transparent; }
+        .trace-body::-webkit-scrollbar-thumb, .trace-step-content::-webkit-scrollbar-thumb, .chat-container::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; }
+        .trace-body::-webkit-scrollbar-thumb:hover, .trace-step-content::-webkit-scrollbar-thumb:hover, .chat-container::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.2); }
 
-        input {
-            flex: 1;
-            padding: 16px 24px;
-            border-radius: 24px;
-            border: 1px solid var(--border-color);
-            background: var(--container-bg);
-            color: #fff;
-            font-size: 1rem;
-            font-family: inherit;
-            transition: border-color 0.2s ease, box-shadow 0.2s ease;
-        }
+        .toast { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%) translateY(50px); opacity: 0; background: var(--text-main); color: var(--bg-color); padding: 12px 24px; border-radius: 30px; font-weight: 600; font-size: 0.9rem; z-index: 1000; transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        .toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
 
-        input:focus {
-            outline: none;
-            border-color: var(--accent-color);
-            box-shadow: 0 0 0 4px rgba(88, 166, 255, 0.1);
-        }
+        @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+        @keyframes slideUpFade { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes pulse { 0% { opacity: 0.5; } 50% { opacity: 1; } 100% { opacity: 0.5; } }
 
-        input::placeholder {
-            color: var(--text-muted);
-        }
-
-        button {
-            padding: 0 24px;
-            border-radius: 24px;
-            border: none;
-            background: var(--accent-color);
-            color: #0d1117;
-            font-size: 1rem;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            font-family: inherit;
-        }
-
-        button:hover {
-            background: #79c0ff;
-            transform: translateY(-1px);
-        }
-
-        button:active {
-            transform: translateY(1px);
-        }
-
-        button:disabled {
-            background: #30363d;
-            color: #8b949e;
-            cursor: not-allowed;
-            transform: none;
-        }
-
-        .loading-indicator {
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            height: 24px;
-            padding: 16px 20px;
-            background: var(--bot-bubble);
-            border: 1px solid var(--border-color);
-            border-radius: 16px;
-            border-bottom-left-radius: 4px;
-        }
-
-        .dot {
-            width: 6px;
-            height: 6px;
-            background-color: var(--text-muted);
-            border-radius: 50%;
-            animation: bounce 1.4s infinite ease-in-out both;
-        }
-
-        .dot:nth-child(1) { animation-delay: -0.32s; }
-        .dot:nth-child(2) { animation-delay: -0.16s; }
-
-        @keyframes bounce {
-            0%, 80%, 100% { transform: scale(0); opacity: 0.3; }
-            40% { transform: scale(1); opacity: 1; }
-        }
-
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        @media (max-width: 768px) {
-            .input-box { flex-direction: column; }
-            button { padding: 16px; }
-            .header, .chat-container, .input-container { padding: 16px; }
-            .message.user { max-width: 90%; }
-            .best-pick-card { grid-column: auto; }
-        }
     </style>
 </head>
 <body>
 
     <header class="header">
-        <h1>📱 AI Mobile Finder</h1>
+        <div style="display: flex; align-items: center;">
+            <button class="icon-btn mobile-filter-btn" id="toggleFiltersBtn" title="Toggle Filters">☰</button>
+            <h1>📱 AI Smart Mobile Finder</h1>
+        </div>
+        <div class="header-actions">
+            <button id="clearChatBtn" class="secondary-btn" title="Clear Conversation">Clear Chat</button>
+            <button id="toggleTraceBtn" title="Toggle Developer Trace Panel">🐛 Trace / Debug</button>
+        </div>
     </header>
 
-    <main class="chat-container" id="chatContainer">
-        <div class="message-list" id="messageList">
-            <div class="message bot">
-                <div class="bubble" style="background: var(--bot-bubble); border: 1px solid var(--border-color); border-bottom-left-radius: 4px; padding: 16px 20px;">
-                    Hello! I'm your AI smartphone assistant. Tell me what you need, and I'll find the perfect smartphones for you.
-                    <br><br>
-                    <span style="color: var(--text-muted); font-size: 0.9em;">Example: "I want the best 5G smartphone under 30000 with a great camera and battery."</span>
+    <div class="main-wrapper">
+        <!-- SIDEBAR: Filter Panel -->
+        <aside class="sidebar-filters" id="sidebarFilters">
+            <div class="filter-section-title">
+                <span>⚙️ Preferences</span>
+            </div>
+            <div class="filter-group">
+                <label>Price Range</label>
+                <select id="f_price">
+                    <option value="">Any</option>
+                    <option value="Under 10,000">Under 10,000</option>
+                    <option value="10,000 - 20,000">10,000 - 20,000</option>
+                    <option value="20,000 - 30,000">20,000 - 30,000</option>
+                    <option value="30,000+">30,000+</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label>Brand</label>
+                <select id="f_brand">
+                    <option value="">Any</option>
+                    <option value="Apple">Apple</option>
+                    <option value="Samsung">Samsung</option>
+                    <option value="OnePlus">OnePlus</option>
+                    <option value="Xiaomi">Xiaomi</option>
+                    <option value="Realme">Realme</option>
+                    <option value="iQOO">iQOO</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label>Battery</label>
+                <select id="f_battery">
+                    <option value="">Any</option>
+                    <option value="4000mAh+">4000mAh+</option>
+                    <option value="5000mAh+">5000mAh+</option>
+                    <option value="6000mAh+">6000mAh+</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label>Camera</label>
+                <select id="f_camera">
+                    <option value="">Any</option>
+                    <option value="Normal">Normal</option>
+                    <option value="Good">Good</option>
+                    <option value="Best (Flagship camera)">Flagship</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label>Performance</label>
+                <select id="f_perf">
+                    <option value="">Any</option>
+                    <option value="Normal use">Normal</option>
+                    <option value="Gaming">Gaming</option>
+                    <option value="Heavy performance">Heavy</option>
+                </select>
+            </div>
+            <div class="sidebar-actions">
+                <button id="applyFiltersBtn">Apply Filters</button>
+                <button id="clearFiltersBtn" class="secondary-btn">Clear Options</button>
+            </div>
+        </aside>
+
+        <!-- CENTER: Chat UI -->
+        <div class="left-pane" id="leftPane">
+            <main class="chat-container" id="chatContainer">
+                <div class="message-list" id="messageList">
+                    <div class="message bot">
+                        <div class="bubble-container">
+                            <div class="info-bubble">
+                                Hello! I'm your AI smartphone assistant. <br><br>
+                                You can <strong>type exactly what you need below</strong> (e.g. "best gaming phone under 30000") or <strong>select strict filters from the top menu</strong>.
+                            </div>
+                        </div>
+                    </div>
                 </div>
+            </main>
+
+            <div class="input-container">
+                <form class="input-box" id="chatForm">
+                    <input type="text" id="chatInput" placeholder="Type text or use filters above..." autocomplete="off">
+                    <button type="submit" id="chatSubmitBtn">Ask AI</button>
+                </form>
             </div>
         </div>
-    </main>
 
-    <div class="input-container">
-        <form class="input-box" id="queryForm">
-            <input type="text" id="queryInput" placeholder="Describe your ideal smartphone..." autocomplete="off" required>
-            <button type="submit" id="submitBtn">Ask AI</button>
-        </form>
+        <!-- RIGHT PANE: Trace History Panel -->
+        <div class="right-pane closed" id="tracePanel">
+            <div class="trace-header">
+                <h2>🐛 AI Trace Logs</h2>
+                <div class="trace-actions">
+                    <button class="icon-btn" id="clearTraceBtn" title="Clear Trace History">🗑️</button>
+                    <button class="icon-btn" id="downloadTraceBtn" title="Download Full Trace JSON">📥</button>
+                    <button class="icon-btn" id="closeTraceBtn" title="Close Panel">✖️</button>
+                </div>
+            </div>
+            <div class="trace-body" id="traceBody">
+                <div id="emptyTraceMsg" style="color:var(--text-muted); font-size:0.85rem; text-align:center; margin-top:40px;">No requests processed yet.</div>
+            </div>
+        </div>
     </div>
 
+    <!-- Toast Notification -->
+    <div id="toast" class="toast">Copied to clipboard!</div>
+
     <script>
-        const form = document.getElementById('queryForm');
-        const input = document.getElementById('queryInput');
-        const submitBtn = document.getElementById('submitBtn');
+        // --- TOAST UTILITY ---
+        function showToast(msg) {
+            const t = document.getElementById('toast');
+            t.innerText = msg;
+            t.classList.add('show');
+            setTimeout(() => t.classList.remove('show'), 3000);
+        }
+
+        window.copyReasoning = function(text) {
+            navigator.clipboard.writeText(text).then(() => showToast("Reasoning copied!"));
+        };
+
+        // --- TRACE PANEL TOGGLE ---
+        const tracePanel = document.getElementById('tracePanel');
+        function toggleTrace() { tracePanel.classList.toggle('closed'); }
+        document.getElementById('toggleTraceBtn').addEventListener('click', toggleTrace);
+        document.getElementById('closeTraceBtn').addEventListener('click', () => tracePanel.classList.add('closed'));
+
+        // --- FILTER PANEL TOGGLE & CLEAR ---
+        const sidebarFilters = document.getElementById('sidebarFilters');
+        if (document.getElementById('toggleFiltersBtn')) {
+            document.getElementById('toggleFiltersBtn').addEventListener('click', () => {
+                sidebarFilters.classList.toggle('open');
+            });
+        }
+        document.getElementById('clearFiltersBtn').addEventListener('click', () => {
+            document.getElementById('f_price').value = "";
+            document.getElementById('f_brand').value = "";
+            document.getElementById('f_battery').value = "";
+            document.getElementById('f_camera').value = "";
+            document.getElementById('f_perf').value = "";
+        });
+
+        // --- DOM ELEMENTS ---
+        const chatForm = document.getElementById('chatForm');
+        const chatInput = document.getElementById('chatInput');
+        const chatSubmitBtn = document.getElementById('chatSubmitBtn');
+        const applyFiltersBtn = document.getElementById('applyFiltersBtn');
         const messageList = document.getElementById('messageList');
         const chatContainer = document.getElementById('chatContainer');
+        const emptyTraceMsg = document.getElementById('emptyTraceMsg');
+        const traceBody = document.getElementById('traceBody');
 
-        function scrollToBottom() {
-            chatContainer.scrollTo({
-                top: chatContainer.scrollHeight,
-                behavior: 'smooth'
+        const filters = {
+            price: document.getElementById('f_price'),
+            brand: document.getElementById('f_brand'),
+            battery: document.getElementById('f_battery'),
+            camera: document.getElementById('f_camera'),
+            performance: document.getElementById('f_perf')
+        };
+
+        // --- STATE ---
+        let requestCounter = 0;
+        let traceHistoryData = [];
+
+        // --- TRACE PANEL UI BUILDS ---
+        document.getElementById('clearTraceBtn').addEventListener('click', () => {
+            traceHistoryData = [];
+            requestCounter = 0;
+            traceBody.innerHTML = '';
+            traceBody.appendChild(emptyTraceMsg);
+            emptyTraceMsg.style.display = 'block';
+            showToast("Trace Cleared!");
+        });
+
+        document.getElementById('downloadTraceBtn').addEventListener('click', () => {
+            if(traceHistoryData.length === 0) return showToast("No trace data to download");
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(traceHistoryData, null, 2));
+            const anchor = document.createElement('a');
+            anchor.setAttribute("href", dataStr);
+            anchor.setAttribute("download", "trace_debug_log.json");
+            document.body.appendChild(anchor);
+            anchor.click();
+            anchor.remove();
+        });
+
+        function appendTraceBlock(trace) {
+            emptyTraceMsg.style.display = 'none';
+            requestCounter++;
+            traceHistoryData.push(trace);
+
+            const block = document.createElement('div');
+            block.className = 'trace-card';
+
+            const timeStr = trace.timestamp ? new Date(trace.timestamp).toLocaleTimeString() : '';
+            
+            block.innerHTML = `
+                <div class="trace-card-header">
+                    <span class="trace-card-title">Request #${requestCounter}</span>
+                    <span class="trace-card-time">${timeStr} <span style="display:inline-block; width:12px; text-align:right">▼</span></span>
+                </div>
+                <div class="trace-card-body"></div>
+            `;
+            const header = block.querySelector('.trace-card-header');
+            const body = block.querySelector('.trace-card-body');
+
+            header.addEventListener('click', () => {
+                const isOpen = body.classList.toggle('open');
+                header.querySelector('span:last-child').innerText = isOpen ? '▲' : '▼';
             });
+
+            trace.steps.forEach((sd, index) => {
+                const isFinal = index === trace.steps.length - 1;
+                
+                let color = '#e6edf3';
+                if(sd.step === 'Thought' || sd.step === 'Input') color = '#58a6ff'; // blue
+                else if(sd.step === 'Action') color = '#ffd700'; // yellow
+                else if(sd.step === 'Observation' || sd.step === 'Filtered') color = '#3fb950'; // green
+
+                const stepEl = document.createElement('div');
+                stepEl.className = 'trace-step';
+                
+                let titleStr = `[${sd.step}]`;
+                if(sd.tool) titleStr += ` Using: ${sd.tool}`;
+
+                let contentHtml = '';
+                if(sd.step === 'Thought') {
+                    contentHtml = `<div style="padding-bottom:12px; font-size:0.9rem; font-family: 'Inter', sans-serif;">💬 <em>${escapeHTML(sd.content)}</em></div>`;
+                } else if(sd.step === 'Action') {
+                    contentHtml = `<div style="padding-bottom:12px; font-size:0.9rem; font-family: 'Inter', sans-serif;">🛠️ Input: <strong>${escapeHTML(sd.input)}</strong></div>`;
+                } else {
+                    const dataStr = typeof sd.content === 'string' ? sd.content : JSON.stringify(sd.content, null, 2);
+                    contentHtml = `<pre>${escapeHTML(dataStr)}</pre>`;
+                }
+
+                stepEl.innerHTML = `
+                    <div class="trace-step-header" style="color: ${color}; border-left: 3px solid ${color}; padding-left: 13px;">
+                        <span>${titleStr}</span>
+                        <span>${isFinal ? '▼' : '▶'}</span>
+                    </div>
+                    <div class="trace-step-content-wrapper ${isFinal ? 'open' : ''}">
+                        <div class="trace-step-content">
+                            ${contentHtml}
+                        </div>
+                    </div>
+                `;
+                
+                stepEl.querySelector('.trace-step-header').addEventListener('click', (e) => {
+                    const wrapper = e.currentTarget.nextElementSibling;
+                    const isStepOpen = wrapper.classList.toggle('open');
+                    e.currentTarget.querySelectorAll('span')[1].innerText = isStepOpen ? '▼' : '▶';
+                });
+                
+                body.appendChild(stepEl);
+            });
+
+            // Open the first trace card automatically
+            if(requestCounter === 1) body.classList.add('open');
+
+            traceBody.insertBefore(block, traceBody.firstChild);
+        }
+
+        // --- CHAT RENDERING UI ---
+        function scrollToBottom() {
+            setTimeout(() => { chatContainer.scrollTop = chatContainer.scrollHeight; }, 50);
         }
 
         function appendUserMessage(text) {
@@ -433,10 +648,16 @@
             const msgObj = document.createElement('div');
             msgObj.className = 'message bot loading';
             msgObj.innerHTML = `
-                <div class="loading-indicator">
-                    <div class="dot"></div>
-                    <div class="dot"></div>
-                    <div class="dot"></div>
+                <div class="bubble-container">
+                    <div class="shimmer-bubble">
+                        <div class="shimmer-header">
+                            <span class="shimmer-icon">🤖</span>
+                            <span class="shimmer-text">AI is thinking & searching...</span>
+                        </div>
+                        <div class="shimmer-line"></div>
+                        <div class="shimmer-line w-75"></div>
+                        <div class="shimmer-line w-50" style="margin-bottom:0"></div>
+                    </div>
                 </div>
             `;
             messageList.appendChild(msgObj);
@@ -444,56 +665,97 @@
             return msgObj;
         }
 
-        function escapeHTML(str) {
-            return str.replace(/[&<>'"]/g, 
-                tag => ({
-                    '&': '&amp;',
-                    '<': '&lt;',
-                    '>': '&gt;',
-                    "'": '&#39;',
-                    '"': '&quot;'
-                }[tag])
-            );
-        }
+        document.getElementById('clearChatBtn').addEventListener('click', () => {
+            messageList.innerHTML = `
+                <div class="message bot">
+                    <div class="bubble-container">
+                        <div class="info-bubble">Conversation cleared. What's next?</div>
+                    </div>
+                </div>
+            `;
+            showToast("Chat Cleared!");
+        });
+
+        // --- PARSER ---
+        function escapeHTML(str) { return str.replace(/[&<>'"]/g, t => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[t])); }
+        function sanitizeUrl(url) { if (!url) return "#"; let u = url.trim().replace("https//", "https://").replace("http//", "http://"); if (u.startsWith("/")) u = u.substring(1); if (!u.startsWith("http")) u = "https://" + u; return u; }
 
         function parseResponse(text) {
+            // Extract SHORT reasoning (2-3 bullets) for chat display
+            let reasoningShort = '';
+            const shortMatch = text.match(/REASONING_SHORT:\s*([\s\S]+?)(?=\nREASONING:|\n*---|\n*BEST PICK:)/i);
+            if (shortMatch) reasoningShort = shortMatch[1].trim();
+
+            // Extract full 8-step REASONING for trace panel (starts after REASONING_SHORT block)
             let reasoning = '';
-            const reasonMatch = text.match(/REASONING:\s*([\s\S]+?)(?=\n*---|\n*BEST PICK:)/i);
+            const reasonMatch = text.match(/(?:^|\n)REASONING:\s*([\s\S]+?)(?=\n*---|\n*BEST PICK:|\n*RECOMMENDATIONS:)/im);
             if (reasonMatch) reasoning = reasonMatch[1].trim();
 
+            let noMatchData = null;
+            if (text.includes("NO EXACT MATCH FOUND")) {
+                let reason = "";
+                let suggestions = "";
+                const rMatch = text.match(/REASON:\s*([\s\S]+?)(?=\n*SUGGESTIONS:)/i);
+                if(rMatch) reason = rMatch[1].trim();
+                const sMatch = text.match(/SUGGESTIONS:\s*([\s\S]+?)(?=\n*ALTERNATIVE PHONES:|$)/i);
+                if(sMatch) suggestions = sMatch[1].trim();
+                noMatchData = { reason, suggestions };
+            }
+
+            // PARTIAL MATCH FOUND — over-budget closest match
+            let partialMatch = null;
+            if (text.includes("PARTIAL MATCH FOUND")) {
+                const cmName = text.match(/CLOSEST MATCH:[\s\S]*?NAME:\s*(.+)/i);
+                const cmPrice = text.match(/ESTIMATED PRICE:\s*(.+)/i);
+                const cmWhy = text.match(/WHY CLOSEST:\s*(.+)/i);
+                const altLines = text.match(/ALTERNATIVE OPTIONS WITHIN BUDGET:\s*([\s\S]+?)(?=\n*---|$)/i);
+                partialMatch = {
+                    name: cmName ? cmName[1].trim() : "Closest Available",
+                    price: cmPrice ? cmPrice[1].trim() : "",
+                    why: cmWhy ? cmWhy[1].trim() : "",
+                    alternatives: altLines ? altLines[1].trim().split('\n').filter(l => l.trim().startsWith('*')).map(l => l.replace(/^[*\-]\s*/, '').trim()) : []
+                };
+            }
+
             let bestPick = null;
-            const bestPickRegex = /BEST PICK:\s*NAME:\s*(.+?)\s*SPECS:\s*([\s\S]+?)\s*WHY BEST:\s*([\s\S]+?)(?=\n*---|OTHER RECOMMENDATIONS:|\n*NAME:|$)/gi;
+            const bestPickRegex = /BEST PICK:\s*NAME:\s*(.+?)\s*PRICE:\s*(.+?)\s*SPECS:\s*([\s\S]+?)\s*WHY BEST:\s*([\s\S]+?)(?=\n*---|OTHER RECOMMENDATIONS:|\n*NAME:|$)/gi;
             const bestMatch = bestPickRegex.exec(text);
             if (bestMatch) {
                 bestPick = {
                     name: bestMatch[1].trim(),
-                    specs: bestMatch[2].trim().split('\n').map(s => s.replace(/^[*\-]\s*/, '').trim()).filter(Boolean),
-                    whyBest: bestMatch[3].trim()
+                    price: bestMatch[2].trim(),
+                    specs: bestMatch[3].trim().split('\n').map(s => s.replace(/^[*\-]\s*/, '').trim()).filter(Boolean),
+                    whyBest: bestMatch[4].trim()
                 };
+            }
+            // Fallback: try without PRICE field (older format)
+            if (!bestPick) {
+                const bestPickFallback = /BEST PICK:\s*NAME:\s*(.+?)\s*SPECS:\s*([\s\S]+?)\s*WHY BEST:\s*([\s\S]+?)(?=\n*---|OTHER RECOMMENDATIONS:|\n*NAME:|$)/gi;
+                const fm = bestPickFallback.exec(text);
+                if (fm) bestPick = { name: fm[1].trim(), price: '', specs: fm[2].trim().split('\n').map(s => s.replace(/^[*\-]\s*/, '').trim()).filter(Boolean), whyBest: fm[3].trim() };
             }
 
             let otherRecs = [];
-            // Parse OTHER RECOMMENDATIONS using NAME: as an anchor
-            const othersPattern = /NAME:\s*(.+?)\s*SPECS:\s*([\s\S]+?)\s*WHY GOOD:\s*([\s\S]+?)(?=\n*NAME:|\n*---|\n*LINKS:|$)/gi;
-            
-            // Search string for everything after BEST PICK, or entire text if none
-            let othersStart = text.indexOf('OTHER RECOMMENDATIONS:');
+            const othersPattern = /NAME:\s*(.+?)\s*PRICE:\s*(.+?)\s*SPECS:\s*([\s\S]+?)\s*WHY GOOD:\s*([\s\S]+?)(?=\n*NAME:|\n*---|\n*LINKS:|$)/gi;
             let searchSpace = text;
-            if (othersStart !== -1) {
-                searchSpace = text.slice(othersStart, text.indexOf('LINKS:'));
-            } else if (bestPick) {
-                searchSpace = text.slice(text.indexOf(bestPick.whyBest) + bestPick.whyBest.length, text.indexOf('LINKS:'));
-            }
+            let othersStart = text.indexOf('OTHER RECOMMENDATIONS:');
+            if (othersStart === -1) othersStart = text.indexOf('ALTERNATIVE PHONES:');
+
+            if (othersStart !== -1) searchSpace = text.slice(othersStart, text.indexOf('LINKS:'));
+            else if (bestPick) searchSpace = text.slice(text.indexOf(bestPick.whyBest) + bestPick.whyBest.length, text.indexOf('LINKS:'));
 
             let match;
             while ((match = othersPattern.exec(searchSpace)) !== null) {
-                if (bestPick && bestPick.name === match[1].trim()) continue; // Prevent duplicates just in case
-                
-                otherRecs.push({
-                    name: match[1].trim(),
-                    specs: match[2].trim().split('\n').map(s => s.replace(/^[*\-]\s*/, '').trim()).filter(Boolean),
-                    whyGood: match[3].trim()
-                });
+                if (bestPick && bestPick.name === match[1].trim()) continue;
+                otherRecs.push({ name: match[1].trim(), price: match[2].trim(), specs: match[3].trim().split('\n').map(s => s.replace(/^[*\-]\s*/, '').trim()).filter(Boolean), whyGood: match[4].trim() });
+            }
+            // Fallback: try without PRICE
+            if (otherRecs.length === 0) {
+                const fallbackPattern = /NAME:\s*(.+?)\s*SPECS:\s*([\s\S]+?)\s*WHY GOOD:\s*([\s\S]+?)(?=\n*NAME:|\n*---|\n*LINKS:|$)/gi;
+                while ((match = fallbackPattern.exec(searchSpace)) !== null) {
+                    if (bestPick && bestPick.name === match[1].trim()) continue;
+                    otherRecs.push({ name: match[1].trim(), price: '', specs: match[2].trim().split('\n').map(s => s.replace(/^[*\-]\s*/, '').trim()).filter(Boolean), whyGood: match[3].trim() });
+                }
             }
 
             let links = {};
@@ -503,154 +765,257 @@
                 if (linkBlocks) {
                     linkBlocks.forEach(block => {
                         const parts = block.split(/:\s*\n*/);
-                        if (parts.length >= 2) {
-                            links[parts[0].trim()] = parts.slice(1).join('').trim();
-                        }
+                        if (parts.length >= 2) links[parts[0].trim()] = parts.slice(1).join('').trim();
                     });
                 }
             }
-            
-            return { reasoning, bestPick, otherRecs, links };
-        }
-
-
-
-        function sanitizeUrl(url) {
-            if (!url) return "#";
-            url = url.trim();
-
-            // Fix missing colon
-            url = url.replace("https//", "https://");
-            url = url.replace("http//", "http://");
-
-            // Remove leading slash
-            if (url.startsWith("/")) {
-                url = url.substring(1);
-            }
-
-            // Ensure absolute URL
-            if (!url.startsWith("http")) {
-                url = "https://" + url;
-            }
-
-            return url;
+            return { reasoning, reasoningShort, noMatchData, partialMatch, bestPick, otherRecs, links };
         }
 
         function createResultHTML(parsed, fullText) {
-            let html = '';
-
-            if (parsed.reasoning) {
-                html += `<div class="reasoning">${escapeHTML(parsed.reasoning)}</div>`;
+            function priceBadge(price, isBest) {
+                if (!price) return '';
+                const color = isBest ? 'var(--accent-color)' : '#4caf82';
+                return `<div style="font-size:1.1rem; font-weight:700; color:${color}; margin:6px 0 10px; display:flex; align-items:center; gap:6px;">💰 ${escapeHTML(price)}</div>`;
             }
 
             function renderCard(rec, isBest) {
                 const matchedLinkKey = Object.keys(parsed.links).find(k => k.toLowerCase().includes(rec.name.toLowerCase()) || rec.name.toLowerCase().includes(k.toLowerCase()));
-                let link = matchedLinkKey ? parsed.links[matchedLinkKey] : null;
+                let linkHtml = matchedLinkKey && parsed.links[matchedLinkKey] && parsed.links[matchedLinkKey].trim() !== ""
+                    ? `<a href="${sanitizeUrl(parsed.links[matchedLinkKey])}" target="_blank" rel="noopener noreferrer" class="buy-link">View on Store</a>` 
+                    : ``;
 
-                let linkHtml = '';
-                if (link) {
-                    const cleanUrl = sanitizeUrl(link);
-                    console.log("Rendered Link:", cleanUrl);
-                    
-                    const linkElement = document.createElement("a");
-                    linkElement.href = cleanUrl;
-                    linkElement.target = "_blank";
-                    linkElement.rel = "noopener noreferrer";
-                    linkElement.innerText = "Buy Now";
-                    linkElement.className = "buy-link";
-                    
-                    linkHtml = linkElement.outerHTML;
+                if(isBest) {
+                    return `
+                        <div class="phone-card best-pick-card">
+                            <div class="best-badge">⭐ Top Pick</div>
+                            <div>
+                                <div class="phone-name" title="${escapeHTML(rec.name)}">${escapeHTML(rec.name)}</div>
+                                ${priceBadge(rec.price, true)}
+                                <ul class="specs-list">${rec.specs.map(s => `<li>${escapeHTML(s)}</li>`).join('')}</ul>
+                            </div>
+                            <div style="display:flex; flex-direction:column;">
+                                <div class="why-good">
+                                    <div class="why-good-title">Why it's the Best</div>
+                                    ${escapeHTML(rec.whyBest)}
+                                </div>
+                                ${linkHtml}
+                            </div>
+                        </div>
+                    `;
                 }
 
                 return `
-                    <div class="phone-card ${isBest ? 'best-pick-card' : ''}">
-                        ${isBest ? '<div class="best-badge">⭐ TOP PICK</div>' : ''}
-                        <div class="phone-name">${escapeHTML(rec.name)}</div>
-                        <ul class="specs-list">
-                            ${rec.specs.map(s => `<li>${escapeHTML(s)}</li>`).join('')}
-                        </ul>
+                    <div class="phone-card">
+                        <div class="phone-name" title="${escapeHTML(rec.name)}">${escapeHTML(rec.name)}</div>
+                        ${priceBadge(rec.price, false)}
+                        <ul class="specs-list">${rec.specs.map(s => `<li>${escapeHTML(s)}</li>`).join('')}</ul>
                         <div class="why-good">
-                            <div class="why-good-title">${isBest ? "Why it's the Best" : "Why it's a fit"}</div>
-                            ${escapeHTML(isBest ? rec.whyBest : rec.whyGood)}
+                            <div class="why-good-title">Why it's a fit</div>
+                            ${escapeHTML(rec.whyGood)}
                         </div>
                         ${linkHtml}
                     </div>
                 `;
             }
 
-            if (parsed.bestPick) {
-                html += renderCard(parsed.bestPick, true);
-            }
-
-            if (parsed.otherRecs.length > 0) {
-                if (parsed.bestPick) {
-                    html += `<div class="section-title">Other Recommendations</div>`;
+            if (parsed.noMatchData) {
+                let html = `<div class="error-bubble" style="margin-bottom: 24px; color: #fff; background: rgba(255,136,0,0.1); border: 1px solid rgba(255,136,0,0.3);">
+                    <h3 style="color:#ff9900; margin-bottom:12px; font-size:1.1rem; display:flex; align-items:center; gap:8px;">⚠️ No Exact Match Found</h3>
+                    <div style="margin-bottom: 12px; font-size:0.95rem;"><strong>Reason:</strong><br><ul style="margin-left:20px; margin-top:4px; line-height:1.5;">${parsed.noMatchData.reason.split('\\n').filter(Boolean).map(l=>`<li>${escapeHTML(l.replace(/^[*-]\\s*/,''))}</li>`).join('')}</ul></div>
+                    <div style="font-size:0.95rem;"><strong>Suggestions:</strong><br><ul style="margin-left:20px; margin-top:4px; line-height:1.5;">${parsed.noMatchData.suggestions.split('\\n').filter(Boolean).map(l=>`<li>${escapeHTML(l.replace(/^[*-]\\s*/,''))}</li>`).join('')}</ul></div>
+                </div>`;
+                
+                if (parsed.otherRecs.length > 0) {
+                    html += `<h4 style="margin-bottom:16px; color:var(--text-main); font-size:1.05rem;">Here are some alternative options:</h4>`;
+                    html += `<div class="cards-grid">`;
+                    parsed.otherRecs.forEach(rec => html += renderCard(rec, false));
+                    html += `</div>`;
                 }
-                html += `<div class="cards-grid">`;
-                parsed.otherRecs.forEach(rec => {
-                    html += renderCard(rec, false);
-                });
-                html += `</div>`;
+                return html;
             }
 
+            if (parsed.partialMatch) {
+                const pm = parsed.partialMatch;
+                const altHtml = pm.alternatives.length > 0
+                    ? `<ul style="margin:8px 0 0 18px; line-height:1.7;">${pm.alternatives.map(a => `<li>${escapeHTML(a)}</li>`).join('')}</ul>`
+                    : '';
+                return `
+                    <div class="error-bubble" style="margin-bottom:24px; color:#fff; background:rgba(255,165,0,0.08); border:1px solid rgba(255,165,0,0.35); border-radius:16px; padding:24px;">
+                        <h3 style="color:#ffab40; margin-bottom:14px; font-size:1.05rem; display:flex; align-items:center; gap:8px;">⚠️ Closest Match — Over Budget</h3>
+                        <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,165,0,0.2); border-radius:12px; padding:16px; margin-bottom:16px;">
+                            <div style="font-size:1.1rem; font-weight:700; margin-bottom:6px;">${escapeHTML(pm.name)}</div>
+                            ${pm.price ? `<div style="color:#ffab40; font-size:0.95rem; margin-bottom:8px;">Estimated Price: ${escapeHTML(pm.price)}</div>` : ''}
+                            ${pm.why ? `<div style="color:var(--text-muted); font-size:0.9rem;">${escapeHTML(pm.why)}</div>` : ''}
+                        </div>
+                        ${altHtml ? `<div style="font-weight:600; font-size:0.85rem; text-transform:uppercase; letter-spacing:0.5px; color:var(--text-muted); margin-bottom:8px;">✅ Alternatives Within Budget</div>${altHtml}` : ''}
+                    </div>
+                `;
+            }
+
+            // Edge Case: Entirely Empty / Unparseable
             if (!parsed.bestPick && parsed.otherRecs.length === 0) {
-                html += `<div class="bubble" style="white-space: pre-wrap; background: var(--bot-bubble); border: 1px solid var(--border-color); padding: 16px 20px; border-bottom-left-radius: 4px;">${escapeHTML(fullText)}</div>`;
+                if(fullText && fullText.toLowerCase().includes("no smartphones found") || fullText.trim().length < 50) {
+                    return `<div class="empty-bubble info-bubble">No phones matched your exact filters. Try adjusting your preferences.</div>`;
+                }
+                return `<div class="info-bubble"><pre style="white-space:pre-wrap; font-family:inherit;">${escapeHTML(fullText)}</pre></div>`;
             }
 
+            let html = '';
+            
+            // --- SHORT REASONING for Chat (2-3 bullets only) ---
+            if (parsed.reasoningShort) {
+                const bullets = parsed.reasoningShort
+                    .split('\n')
+                    .map(l => l.trim())
+                    .filter(l => l.startsWith('*') || l.startsWith('-'))
+                    .map(l => `<li>${escapeHTML(l.replace(/^[*\-]\s*/, ''))}</li>`)
+                    .join('');
+                html += `
+                    <div class="reasoning-block" style="margin-bottom:20px;">
+                        <div class="reasoning-header">
+                            <span class="reasoning-title">🧠 AI Reasoning (Short)</span>
+                        </div>
+                        <ul style="margin:0; padding-left:20px; line-height:1.8; font-size:0.95rem; color:var(--text-muted);">${bullets}</ul>
+                    </div>
+                `;
+            }
+            
+            // --- FULL REASONING: inject silently into trace panel ---
+            if (parsed.reasoning) {
+                // Find the final trace step (Filtered Products step) and append detailed reasoning there
+                const traceSteps = document.querySelectorAll('.trace-step');
+                if (traceSteps.length > 0) {
+                    const thoughtStep = document.createElement('div');
+                    thoughtStep.className = 'trace-step';
+                    const stepId = `tr-detail-${Date.now()}`;
+                    const formattedFull = escapeHTML(parsed.reasoning)
+                        .replace(/STEP \d+:[^\n]*/gi, m => `<strong style="color:var(--accent-color);display:block;margin-top:14px;margin-bottom:4px;">${m}</strong>`)
+                        .replace(/^\*\s*(.+)$/gm, '<li style="margin-left:18px;list-style:disc;margin-bottom:6px;">$1</li>')
+                        .replace(/\n(?!\s*<)/g, '<br>');
+                    thoughtStep.innerHTML = `
+                        <div class="trace-step-header" onclick="this.nextElementSibling.classList.toggle('open'); this.querySelectorAll('span')[1].innerText = this.nextElementSibling.classList.contains('open') ? '▼' : '▶';">
+                            <span>🔬 Detailed Reasoning (Full 8-Step Analysis)</span>
+                            <span>▶</span>
+                        </div>
+                        <div class="trace-step-content-wrapper">
+                            <div class="trace-step-content"><pre>${formattedFull}</pre></div>
+                        </div>
+                    `;
+                    const traceBody = document.querySelector('.trace-card-body.open') || document.querySelector('.trace-card-body');
+                    if (traceBody) traceBody.appendChild(thoughtStep);
+                }
+            }
+
+            html += `<div class="cards-grid">`;
+            if (parsed.bestPick) html += renderCard(parsed.bestPick, true);
+            parsed.otherRecs.forEach(rec => html += renderCard(rec, false));
+            html += `</div>`;
             return html;
         }
 
-        form.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const query = input.value.trim();
-            if (!query) return;
+        // Request guard — prevents duplicate concurrent requests
+        let _isRequesting = false;
+        let _lastPayload = null;
 
-            input.value = '';
-            submitBtn.disabled = true;
-            input.disabled = true;
+        // --- SUBMISSION HANDLER ---
+        async function fetchAIResponse(payload) {
+            if (_isRequesting) return;  // Block duplicate
+            _isRequesting = true;
+            _lastPayload = payload;
 
-            appendUserMessage(query);
+            chatSubmitBtn.disabled = true;
+            applyFiltersBtn.disabled = true;
+            chatInput.disabled = true;
+            
             const loadingDOM = appendLoading();
+            const clientStart = Date.now();
 
             try {
                 const response = await fetch('/ask', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ question: query })
+                    body: JSON.stringify(payload)
                 });
                 
-                if (!response.ok) throw new Error('Network response was not ok');
-                
+                if (!response.ok) throw new Error('API Error: Status ' + response.status);
                 const data = await response.json();
+                const elapsed = data.response_time || `${((Date.now() - clientStart) / 1000).toFixed(1)}s`;
                 
                 loadingDOM.remove();
+                // Clear any stale error messages
+                document.querySelectorAll('[data-error-msg]').forEach(el => el.remove());
 
-                const answerText = data.answer || '';
-                const parsed = parseResponse(answerText);
+                if(data.trace) appendTraceBlock(data.trace);
+                
+                const parsed = parseResponse(data.answer || '');
+                const resultHtml = createResultHTML(parsed, data.answer || '');
                 
                 const msgObj = document.createElement('div');
                 msgObj.className = 'message bot';
-                
-                const bubbleObj = document.createElement('div');
-                bubbleObj.className = 'bubble';
-                bubbleObj.innerHTML = createResultHTML(parsed, answerText);
-                
-                msgObj.appendChild(bubbleObj);
+                msgObj.innerHTML = `<div class="bubble-container">${resultHtml}<div style="text-align:right; font-size:0.78rem; color:var(--text-muted); margin-top:6px; padding-right:2px; opacity:0.7;">⏱️ Response time: ${elapsed}</div></div>`;
                 messageList.appendChild(msgObj);
+                scrollToBottom();
                 
             } catch (error) {
                 loadingDOM.remove();
+                // Remove any existing error bubble before adding new one (prevents stacking)
+                document.querySelectorAll('[data-error-msg]').forEach(el => el.remove());
                 const msgObj = document.createElement('div');
+                msgObj.setAttribute('data-error-msg', 'true');
                 msgObj.className = 'message bot';
-                msgObj.innerHTML = `<div class="bubble" style="color: #ff7b72; background: rgba(255,123,114,0.1); border: 1px solid rgba(255,123,114,0.3); padding: 16px 20px; border-bottom-left-radius: 4px;">Error: Could not connect to the server. Please try again.</div>`;
+                msgObj.innerHTML = `<div class="bubble-container"><div class="error-bubble" style="display:flex; flex-direction:column; gap:12px;">
+                    <div>❌ Connection Error: Could not reach the AI. Check your connection or restart the server.</div>
+                    <button onclick="document.querySelectorAll('[data-error-msg]').forEach(e=>e.remove()); fetchAIResponse(_lastPayload);" style="align-self:flex-start; padding:8px 16px; border-radius:8px; background:rgba(255,255,255,0.1); color:#fff; border:1px solid rgba(255,255,255,0.2); cursor:pointer; font-size:0.85rem; transition:all 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.18)'" onmouseout="this.style.background='rgba(255,255,255,0.1)'">🔄 Retry</button>
+                </div></div>`;
                 messageList.appendChild(msgObj);
-            } finally {
-                submitBtn.disabled = false;
-                input.disabled = false;
-                input.focus();
                 scrollToBottom();
+            } finally {
+                _isRequesting = false;
+                chatSubmitBtn.disabled = false;
+                applyFiltersBtn.disabled = false;
+                chatInput.disabled = false;
+                chatInput.focus();
             }
+        }
+
+        // --- BINDINGS ---
+        chatForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const text = chatInput.value.trim();
+            
+            // Edge case check empty
+            const activeFilterCount = Object.values(filters).filter(s => s.value !== "").length;
+            if (!text && activeFilterCount === 0) return;
+            
+            chatInput.value = '';
+            
+            if(text) appendUserMessage(text);
+            else appendUserMessage("Executing current filters...");
+            
+            fetchAIResponse({ question: text || null, filters: activeFilterCount > 0 ? {
+                price: filters.price.value, brand: filters.brand.value, battery: filters.battery.value,
+                camera: filters.camera.value, performance: filters.performance.value
+            } : null });
         });
+
+        applyFiltersBtn.addEventListener('click', () => {
+             const payloadFilters = {
+                price: filters.price.value, brand: filters.brand.value, battery: filters.battery.value,
+                camera: filters.camera.value, performance: filters.performance.value
+            };
+            const activeTags = Object.values(filters).filter(s => s.value).map(s => s.options[s.selectedIndex].text);
+            
+            if (activeTags.length === 0) {
+                appendUserMessage(`Checking all smartphones broadly...`);
+                fetchAIResponse({ filters: payloadFilters });
+                return;
+            }
+
+            appendUserMessage(`Filters applied: ${activeTags.join(', ')}`);
+            fetchAIResponse({ filters: payloadFilters });
+        });
+
     </script>
 </body>
 </html>
