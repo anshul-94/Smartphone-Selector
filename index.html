@@ -533,6 +533,8 @@
         // --- STATE ---
         let requestCounter = 0;
         let traceHistoryData = [];
+        window.chatHistory = [];
+        window.hasShownNoMatch = false;
 
         // --- TRACE PANEL UI BUILDS ---
         document.getElementById('clearTraceBtn').addEventListener('click', () => {
@@ -673,6 +675,8 @@
                     </div>
                 </div>
             `;
+            window.chatHistory = [];
+            window.hasShownNoMatch = false;
             showToast("Chat Cleared!");
         });
 
@@ -820,14 +824,26 @@
             }
 
             if (parsed.noMatchData) {
-                let html = `<div class="error-bubble" style="margin-bottom: 24px; color: #fff; background: rgba(255,136,0,0.1); border: 1px solid rgba(255,136,0,0.3);">
-                    <h3 style="color:#ff9900; margin-bottom:12px; font-size:1.1rem; display:flex; align-items:center; gap:8px;">⚠️ No Exact Match Found</h3>
-                    <div style="margin-bottom: 12px; font-size:0.95rem;"><strong>Reason:</strong><br><ul style="margin-left:20px; margin-top:4px; line-height:1.5;">${parsed.noMatchData.reason.split('\\n').filter(Boolean).map(l=>`<li>${escapeHTML(l.replace(/^[*-]\\s*/,''))}</li>`).join('')}</ul></div>
-                    <div style="font-size:0.95rem;"><strong>Suggestions:</strong><br><ul style="margin-left:20px; margin-top:4px; line-height:1.5;">${parsed.noMatchData.suggestions.split('\\n').filter(Boolean).map(l=>`<li>${escapeHTML(l.replace(/^[*-]\\s*/,''))}</li>`).join('')}</ul></div>
-                </div>`;
+                let html = '';
+                if (!window.hasShownNoMatch) {
+                    window.hasShownNoMatch = true;
+                    html += `<div class="error-bubble" style="margin-bottom: 24px; color: #fff; background: rgba(255,136,0,0.1); border: 1px solid rgba(255,136,0,0.3);">
+                        <h3 style="color:#ff9900; margin-bottom:12px; font-size:1.1rem; display:flex; align-items:center; gap:8px;">⚠️ No Exact Match Found</h3>
+                        <div style="margin-bottom: 12px; font-size:0.95rem;"><strong>Reason:</strong><br><ul style="margin-left:20px; margin-top:4px; line-height:1.5;">${parsed.noMatchData.reason.split('\\n').filter(Boolean).map(l=>`<li>${escapeHTML(l.replace(/^[*-]\\s*/,''))}</li>`).join('')}</ul></div>
+                        <div style="font-size:0.95rem;"><strong>Suggestions:</strong><br><ul style="margin-left:20px; margin-top:4px; line-height:1.5;">${parsed.noMatchData.suggestions.split('\\n').filter(Boolean).map(l=>`<li>${escapeHTML(l.replace(/^[*-]\\s*/,''))}</li>`).join('')}</ul></div>
+                    </div>`;
+                } else {
+                    html += `<div class="error-bubble" style="margin-bottom: 24px; color: #ffab40; background: rgba(255,136,0,0.1); border: 1px solid rgba(255,136,0,0.3); padding: 16px; border-radius: 12px;">
+                        Still no exact match for updated filters, but here are closest options 👇
+                    </div>`;
+                }
                 
                 if (parsed.otherRecs.length > 0) {
-                    html += `<h4 style="margin-bottom:16px; color:var(--text-main); font-size:1.05rem;">Here are some alternative options:</h4>`;
+                    if (window.hasShownNoMatch && html.includes("closest options")) {
+                        // skip redundant heading
+                    } else {
+                        html += `<h4 style="margin-bottom:16px; color:var(--text-main); font-size:1.05rem;">Here are some alternative options:</h4>`;
+                    }
                     html += `<div class="cards-grid">`;
                     parsed.otherRecs.forEach(rec => html += renderCard(rec, false));
                     html += `</div>`;
@@ -865,20 +881,34 @@
             
             // --- SHORT REASONING for Chat (2-3 bullets only) ---
             if (parsed.reasoningShort) {
+                let warningBanner = '';
+                if (parsed.reasoningShort.includes("⚠️ Exact match not found")) {
+                    warningBanner = `
+                        <div class="error-bubble" style="margin-bottom: 20px; color: #ffab40; background: rgba(255,136,0,0.1); border: 1px solid rgba(255,136,0,0.3); padding: 16px; border-radius: 12px; font-weight: 600; font-size: 1.05rem;">
+                            ⚠️ Exact match not found, but here are closest options 👇
+                        </div>
+                    `;
+                }
+
                 const bullets = parsed.reasoningShort
                     .split('\n')
                     .map(l => l.trim())
                     .filter(l => l.startsWith('*') || l.startsWith('-'))
                     .map(l => `<li>${escapeHTML(l.replace(/^[*\-]\s*/, ''))}</li>`)
                     .join('');
-                html += `
-                    <div class="reasoning-block" style="margin-bottom:20px;">
-                        <div class="reasoning-header">
-                            <span class="reasoning-title">🧠 AI Reasoning (Short)</span>
+
+                if (warningBanner) html += warningBanner;
+
+                if (bullets) {
+                    html += `
+                        <div class="reasoning-block" style="margin-bottom:20px;">
+                            <div class="reasoning-header">
+                                <span class="reasoning-title">🧠 AI Reasoning (Short)</span>
+                            </div>
+                            <ul style="margin:0; padding-left:20px; line-height:1.8; font-size:0.95rem; color:var(--text-muted);">${bullets}</ul>
                         </div>
-                        <ul style="margin:0; padding-left:20px; line-height:1.8; font-size:0.95rem; color:var(--text-muted);">${bullets}</ul>
-                    </div>
-                `;
+                    `;
+                }
             }
             
             // --- FULL REASONING: inject silently into trace panel ---
@@ -951,6 +981,8 @@
                 const parsed = parseResponse(data.answer || '');
                 const resultHtml = createResultHTML(parsed, data.answer || '');
                 
+                window.chatHistory.push({ role: 'assistant', content: data.answer || '' });
+                
                 const msgObj = document.createElement('div');
                 msgObj.className = 'message bot';
                 msgObj.innerHTML = `<div class="bubble-container">${resultHtml}<div style="text-align:right; font-size:0.78rem; color:var(--text-muted); margin-top:6px; padding-right:2px; opacity:0.7;">⏱️ Response time: ${elapsed}</div></div>`;
@@ -993,10 +1025,16 @@
             if(text) appendUserMessage(text);
             else appendUserMessage("Executing current filters...");
             
-            fetchAIResponse({ question: text || null, filters: activeFilterCount > 0 ? {
+            const userHistoryText = text || "Executing current filters...";
+            const payloadFilters = activeFilterCount > 0 ? {
                 price: filters.price.value, brand: filters.brand.value, battery: filters.battery.value,
                 camera: filters.camera.value, performance: filters.performance.value
-            } : null });
+            } : null;
+            
+            const payload = { question: text || null, filters: payloadFilters, history: window.chatHistory };
+            window.chatHistory.push({ role: 'user', content: userHistoryText });
+            
+            fetchAIResponse(payload);
         });
 
         applyFiltersBtn.addEventListener('click', () => {
@@ -1007,13 +1045,19 @@
             const activeTags = Object.values(filters).filter(s => s.value).map(s => s.options[s.selectedIndex].text);
             
             if (activeTags.length === 0) {
-                appendUserMessage(`Checking all smartphones broadly...`);
-                fetchAIResponse({ filters: payloadFilters });
+                const userMsg = "Checking all smartphones broadly...";
+                appendUserMessage(userMsg);
+                const payload = { filters: payloadFilters, history: window.chatHistory };
+                window.chatHistory.push({ role: 'user', content: userMsg });
+                fetchAIResponse(payload);
                 return;
             }
 
-            appendUserMessage(`Filters applied: ${activeTags.join(', ')}`);
-            fetchAIResponse({ filters: payloadFilters });
+            const userMsg = `Filters applied: ${activeTags.join(', ')}`;
+            appendUserMessage(userMsg);
+            const payload = { filters: payloadFilters, history: window.chatHistory };
+            window.chatHistory.push({ role: 'user', content: userMsg });
+            fetchAIResponse(payload);
         });
 
     </script>
