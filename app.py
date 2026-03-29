@@ -26,6 +26,7 @@ app.add_middleware(
 class QueryRequest(BaseModel):
     question: Optional[str] = None
     filters: Optional[dict] = None
+    history: Optional[list] = None
 
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
 TAVILY_API_KEY = os.getenv("TAVILY_API_KEY")
@@ -105,41 +106,60 @@ async def search_tavily(query: str, filters: dict = None) -> tuple[str, list, li
     
     TRUSTED_DOMAINS = ["amazon.in", "flipkart.com", "croma.com", "reliancedigital.in"]
     
-    # 6 diversified queries spanning all 4 trusted retailers
+    # Build a broad fallback query from filters or default to generic
+    broad_q = "smartphones India 2025"
+    if filters:
+        parts = []
+        if filters.get("brand"): parts.append(filters["brand"])
+        else: parts.append("best")
+        parts.append("smartphone")
+        if filters.get("price") and filters["price"] != "Any":
+            val = filters["price"]
+            if "Under" in val: parts.append(val.replace("Under", "under").replace(",", ""))
+            elif "-" in val: parts.append("under " + val.split("-")[1].replace(",", "").strip())
+            elif "+" in val: parts.append("above " + val.replace("+", "").replace(",", "").strip())
+        broad_q = " ".join(parts)
+
+    # 2 optimized sequential queries (primary + fallback)
     queries = [
-        f"{query} buy site:amazon.in",
-        f"{query} buy site:flipkart.com",
-        f"{query} buy site:croma.com",
-        f"{query} buy site:reliancedigital.in",
-        f"{query} 5G 128GB smartphone buy India 2025",
-        f"{query} best phone India under budget flipkart amazon croma",
+        f"{query} buy amazon flipkart croma",
+        f"{broad_q} buy amazon flipkart croma"
     ]
     
-    async def fetch_results(client: httpx.AsyncClient, q: str) -> list[dict]:
-        payload = {
-            "api_key": TAVILY_API_KEY,
-            "query": q,
-            "search_depth": "advanced",
-            "max_results": 10
-        }
-        try:
-            res = await client.post(tavily_url, json=payload, timeout=20.0)
-            res.raise_for_status()
-            data = res.json()
-            if isinstance(data, dict) and "results" in data:
-                return data["results"]
-            return []
-        except Exception as e:
-            print(f"Tavily error for query {q}: {e}")
-            return []
-            
-    async with httpx.AsyncClient() as client:
-        tasks = [fetch_results(client, q) for q in queries]
-        results_lists = await asyncio.gather(*tasks)
-        
     all_results: list[dict] = []
-    for r_list in results_lists:
-        all_results.extend(r_list)
+    
+    async with httpx.AsyncClient() as client:
+        for q in queries:
+            success = False
+            for attempt in range(3):
+                payload = {
+                    "api_key": TAVILY_API_KEY,
+                    "query": q,
+                    "search_depth": "advanced",
+                    "max_results": 10
+                }
+                try:
+                    res = await client.post(tavily_url, json=payload, timeout=12.0)
+                    res.raise_for_status()
+                    data = res.json()
+                    if isinstance(data, dict) and "results" in data:
+                        results = data["results"]
+                        if results:
+                            all_results.extend(results)
+                            success = True
+                            break
+                except Exception as e:
+                    print(f"Tavily error for query '{q}' (attempt {attempt+1}/3): {e}")
+                    if attempt < 2:
+                        await asyncio.sleep(1.5)
+            
+            # If we successfully found enough results, no need to run the fallback query
+            if success and len(all_results) >= 4:
+                break
+        
+    # If Tavily completely fails or returns perfectly empty, return safe fallback
+    if not all_results:
+        return "No live data available, showing best known options", [], []
         
     # Deduplicate by URL
     unique_items: dict[str, dict] = {}
@@ -198,9 +218,18 @@ async def search_tavily(query: str, filters: dict = None) -> tuple[str, list, li
                     break
 
     if not strict_valid_items:
-        if filters and filters.get("price") and filters["price"] != "Any":
-            brand = filters.get("brand", "") or ""
-            return f"BUDGET FAIL: {filters['price']}|{brand}", all_results[:3], []
+        # Fallback Strategy: If brand/budget filtered out everything or Tavily found no results, 
+        # return the closest loosely related items (ignoring constraints) so the prompt can format them.
+        all_trusted = [item for link, item in unique_items.items() if is_any_trusted_domain(link) and not any(b in link.lower() for b in BLACKLIST_PATTERNS)]
+        if not all_trusted:
+            all_trusted = list(unique_items.values())
+
+        if all_trusted:
+            context = "BUDGET/BRAND FAIL - NO STRICT MATCHES\n\nFallback Options (Ignore brand/budget constraints and present these as the closest available options):\n\n"
+            for item in all_trusted[:5]:
+                context += f"Title: {item.get('title')}\nURL: {item.get('url')}\nContent: {item.get('content')}\n\n"
+            return context, all_results[:3], all_trusted[:5]
+            
         return "NO VALID PRODUCTS EXIST FOR THESE CONSTRAINTS.", all_results[:3], []
         
     context = "VERIFIED DIRECT PRODUCT LINKS:\n\n"
@@ -209,11 +238,14 @@ async def search_tavily(query: str, filters: dict = None) -> tuple[str, list, li
         
     return context, all_results[:3], strict_valid_items
 
-async def call_openrouter(query: str, context: str) -> str:
+async def call_openrouter(query: str, context: str, history: list = None) -> str:
     if not OPENROUTER_API_KEY:
         raise HTTPException(status_code=500, detail="OPENROUTER_API_KEY is not set.")
         
-    if "BUDGET FAIL:" in context:
+    if "BUDGET/BRAND FAIL" in context:
+        # Do not return early, allow the LLM to generate the "closest matches" using the fallback options
+        pass
+    elif "BUDGET FAIL:" in context:
         raw = context.split("FAIL: ")[1].strip()
         # Try to extract brand and price from the context token
         # Format is "BUDGET FAIL: <price_range>|<brand>"
@@ -258,8 +290,15 @@ SUGGESTIONS:
         "X-Title": "AI Mobile Finder"
     }
     
-    system_prompt = """You are a senior production-level AI engineer designed to provide EXPLAINABLE reasoning.
+    system_prompt = """You are a UX-focused AI assistant for smartphone recommendations. Your goal is to keep the conversation CLEAN, SMART, and USER-FRIENDLY.
 Build a HIGH-QUALITY AI smartphone recommendation system.
+
+CRITICAL UX RULES:
+1. NO REPETITION: Do NOT repeat long explanations on follow-ups.
+2. SMART FOLLOW-UP HANDLING: If the user refines their query (e.g., adds a battery filter or changes budget), do NOT restart full explanations.
+   - Instead, acknowledge the change seamlessly.
+   - Example: "Got it 👍 Updated for 6000mAh battery. Here are better matching options:"
+3. SHORT RESPONSES ONLY: Keep chat responses SHORT (2-3 lines max). No long paragraphs.
 
 Your job is NOT just to give answers, but to show structured decision-making BEFORE your final list. Provide DETAILED, STEP-BY-STEP reasoning in a SAFE and STRUCTURED way. Do NOT hide reasoning. Do NOT expose sensitive hidden chains. Do not hallucinate data not found in the context!
 
@@ -271,18 +310,29 @@ CRITICAL REQUIREMENTS:
 5. NEVER generate your own links. ONLY use the verified URLs from the context.
 6. Do NOT hallucinate. Drop ANY product without a valid direct link in the context.
 
-BRAND FILTER GUARD (ABSOLUTE RULE):
-- If the user's query specifies a brand (e.g., Apple, Samsung, OnePlus), you MUST ONLY recommend phones of that exact brand.
-- NEVER recommend a different brand even if it has better specs or is cheaper.
-- If the context contains no phones matching the brand, return NO EXACT MATCH FOUND — do NOT recommend phones from other brands as substitutes without clearly labelling them as alternatives.
-- NEVER rename a product. If it says "Redmi" do NOT call it "Xiaomi" and vice versa unless they are the same product.
+BRAND FILTER GUARD & STRICT BUDGET (ABSOLUTE RULES):
+- You MUST ONLY recommend phones that match the user's expected BRAND and BUDGET. NEVER RELAX Budget ❗ NEVER RELAX Brand ❗
+- If the context contains NO phones matching BOTH the user's Brand and Budget, return NO EXACT MATCH FOUND.
 
-You MUST strictly use the following output format. Do not deviate. Be clear and logical using bullet points.
+SMART RELAXATION RULE (VERY IMPORTANT):
+1. For secondary specs (Camera, Battery, Performance), DO NOT stop at strict filtering.
+2. If exact match for all requirements is not found, you MUST SHOW CLOSEST MATCHES instead.
+3. Relax filters in this order: Camera -> Battery -> Performance.
+- Do NOT generate NO EXACT MATCH FOUND just because battery, camera, or performance slightly differs from the user's ideal! Keep them engaged.
+
+You MUST strictly use the following output format. Do not deviate. Be clear and logical.
 
 REASONING_SHORT:
-* [1 line: what the user wants + budget summary]
-* [1 line: which key filter dominated the selection]
-* [1 line: why these phones are the best value match]
+[IF you relaxed Camera, Battery, or Performance specs, output EXACTLY this:]
+⚠️ Exact match not found, but here are closest options 👇
+* Some phones slightly differ in battery or performance
+* But still match your main needs
+
+[ELSE IF this is a follow-up query, output ONLY a 1-2 line acknowledgment:]
+Got it 👍 Updated for [what changed].
+
+[ELSE (first query, perfect match):]
+* 1-2 short bullets summarizing the search.
 
 REASONING:
 
@@ -311,23 +361,8 @@ STEP 8: EDGE CASE HANDLING
 * [If no perfect match, explain compromises. Else: clear.]
 
 IMPORTANT TRANSPARENCY RULES:
-- If a phone in the context EXCEEDS the user's stated budget, do NOT silently recommend it.
-- If the only matching phones are over-budget, use the PARTIAL MATCH FOUND output format instead.
-- NEVER change brand or budget without flagging it to the user.
-
-IF partial match (closest available but over-budget), use THIS format instead of BEST PICK:
-
-PARTIAL MATCH FOUND:
-
-CLOSEST MATCH:
-NAME: [Phone name]
-ESTIMATED PRICE: [~₹XX,XXX]
-WARNING: This phone exceeds your selected budget
-WHY CLOSEST: [1 line explaining why it's the best available near budget]
-
-ALTERNATIVE OPTIONS WITHIN BUDGET:
-* [Android brand] phone available around [budget range]
-* [Another brand] with [key spec] within budget
+- If a phone exactly matches Budget and Brand but violates the battery filter, DO NOT exclude it! Just recommend it as the closest match.
+- NEVER change Brand or exceed Budget without flagging it.
 
 ---
 
@@ -389,13 +424,16 @@ LINKS:
     ]
     
     async with httpx.AsyncClient() as client:
+        messages = [{"role": "system", "content": system_prompt}]
+        if history:
+            for msg in history[-4:]: # Keep only last 4 messages to avoid token bloat
+                messages.append({"role": msg["role"], "content": msg["content"]})
+        messages.append({"role": "user", "content": user_prompt})
+
         for model_name in FREE_MODELS:
             payload = {
                 "model": model_name,
-                "messages": [
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": user_prompt}
-                ],
+                "messages": messages,
                 "temperature": 0.3
             }
             try:
@@ -476,7 +514,7 @@ async def ask(request: QueryRequest):
     start_time = time.time()
     filters_dict = request.filters if request.filters else {}
     context, raw_results, filtered_products = await search_tavily(query_str, filters_dict)
-    answer = await call_openrouter(query_str, context)
+    answer = await call_openrouter(query_str, context, request.history)
     response_time = round(time.time() - start_time, 1)
     
     user_input_str = query_str if request.question else str(request.filters)
